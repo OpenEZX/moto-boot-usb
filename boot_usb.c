@@ -20,7 +20,7 @@
 const char *
 hexdump(const void *data, unsigned int len)
 {
-	static char string[1024];
+	static char string[65535];
 	unsigned char *d = (unsigned char *) data;
 	unsigned int i, left;
 
@@ -67,7 +67,7 @@ static struct usb_device *find_ezx_device(void)
 
 static int ezx_blob_recv_reply(void)
 {
-	char buf[256];
+	char buf[8192];
 	int ret;
 
 	memset(buf, 0, sizeof(buf));
@@ -160,13 +160,14 @@ static int ezx_blob_cmd_bin(char *data, u_int16_t size)
 	if (size > 8192)
 		return -1;
 
-	*(u_int16_t *)buf = size;
+	*(u_int16_t *)buf = htons(size);
 	memcpy(buf+2, data, size);
 	buf[size+2] = ezx_csum(data, size);
 
 	return ezx_blob_send_command("BIN", buf, size+3);
 }
 
+#define CHUNK_SIZE 512
 static int ezx_blob_load_program(u_int32_t addr, char *data, int size)
 {
 	u_int32_t cur_addr;
@@ -174,13 +175,15 @@ static int ezx_blob_load_program(u_int32_t addr, char *data, int size)
 
 	for (cur_addr = addr, cur_data = data; 
 	     cur_addr < addr+size; 
-	     cur_addr += 8192, cur_data += 8192) {
+	     cur_addr += CHUNK_SIZE, cur_data += CHUNK_SIZE) {
 		int remain = (data + size) - cur_data;
-		if (remain > 8192)
-			remain = 8192;
+		if (remain > CHUNK_SIZE)
+			remain = CHUNK_SIZE;
 
-		ezx_blob_cmd_addr(cur_addr);
-		ezx_blob_cmd_bin(cur_data, 8192);
+		if (ezx_blob_cmd_addr(cur_addr) < 0)
+			break;
+		if (ezx_blob_cmd_bin(cur_data, remain) < 0)
+			break;
 	}
 }
 
@@ -188,6 +191,7 @@ static int ezx_blob_load_program(u_int32_t addr, char *data, int size)
 int main(int argc, char **argv)
 {
 	struct usb_device *dev;
+	char prog[1024*1024];
 
 	usb_init();
 	if (!usb_find_busses())
@@ -207,14 +211,15 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 
-#if 0
 	if (usb_claim_interface(hdl, 0) < 0) {
 		printf("Unable to claim usb interface 1 of device: %s\n", usb_strerror());
 		exit(1);
 	}
-#endif
 
-	ezx_blob_cmd_jump(0xa0200000);
+	ezx_blob_send_command("RQHW", NULL, 0);
+	ezx_blob_load_program(0x0a0200000, prog, 256*1024);
+
+	//ezx_blob_cmd_jump(0xa0200000);
 
 	//ezx_blob_send_command("RQHW", NULL, 0);
 	//ezx_blob_recv_reply();
