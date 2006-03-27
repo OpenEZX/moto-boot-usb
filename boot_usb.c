@@ -14,6 +14,13 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <getopt.h>
+#include <errno.h>
+
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/mman.h>
+#include <fcntl.h>
 
 #include <usb.h>
 
@@ -101,11 +108,21 @@ static int ezx_blob_send_command(char *command, char *payload, int len)
 	buf[cur++] = ETX;
 	//buf[cur++] = NUL;
 
-	printf("TX: %s (%s)\n", buf,  hexdump(buf, cur));
+	if (!strcasecmp(command, "bin"))
+		printf("TX: %u bytes\n", cur);
+	else
+		printf("TX: %s (%s)\n", buf,  hexdump(buf, cur));
 
 	ret = usb_bulk_write(hdl, EZX_OUT_EP, buf, cur, 0);
-	ezx_blob_recv_reply();
-	return ret;
+	if (ret < 0)
+		return ret;
+
+	/* this usleep is required in order to make the process work.
+	 * apparently some race condition in the bootloader if we feed
+	 * data too fast */
+	usleep(25000);
+
+	return ezx_blob_recv_reply();
 }
 
 /* the most secure checksum I've ever seen ;) */
@@ -167,7 +184,7 @@ static int ezx_blob_cmd_bin(char *data, u_int16_t size)
 	return ezx_blob_send_command("BIN", buf, size+3);
 }
 
-#define CHUNK_SIZE 512
+#define CHUNK_SIZE 4096
 static int ezx_blob_load_program(u_int32_t addr, char *data, int size)
 {
 	u_int32_t cur_addr;
@@ -187,11 +204,22 @@ static int ezx_blob_load_program(u_int32_t addr, char *data, int size)
 	}
 }
 
+static struct option opts[] = {
+	{ "load", 1, 0, 'l' },
+	{ "exec", 0, 0, 'e' },
+	{ "off", 0, 0, 'o' },
+	{ 0, 0, 0, 0 },
+};
+
+#define KERNEL_RAM_BASE	0xA0200000
+
 
 int main(int argc, char **argv)
 {
 	struct usb_device *dev;
-	char prog[1024*1024];
+	char *filename, *prog;
+	struct stat st;
+	int fd;
 
 	usb_init();
 	if (!usb_find_busses())
@@ -216,10 +244,31 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 
-	ezx_blob_send_command("RQHW", NULL, 0);
-	ezx_blob_load_program(0x0a0200000, prog, 256*1024);
+	filename = argv[1];
+	if (!filename) {
+		printf("You have to specify the file you want to flash\n");
+		exit(2);
+	}
 
-	//ezx_blob_cmd_jump(0xa0200000);
+	fd = open(filename, O_RDONLY);
+	if (fd < 0)
+		exit(2);
+
+	if (fstat(fd, &st) < 0) {
+		printf("Error to access file `%s': %s\n", filename, strerror(errno));
+		exit(2);
+	}
+
+	/* mmap kernel image passed as parameter */
+	prog = mmap(NULL, st.st_size, PROT_READ, MAP_SHARED, fd, 0);
+	if (!prog)
+		exit(1);
+
+	//ezx_blob_send_command("RQHW", NULL, 0);
+
+	ezx_blob_load_program(KERNEL_RAM_BASE, prog, st.st_size);
+
+	ezx_blob_cmd_jump(KERNEL_RAM_BASE);
 
 	//ezx_blob_send_command("RQHW", NULL, 0);
 	//ezx_blob_recv_reply();
