@@ -75,11 +75,15 @@ static struct usb_device *find_ezx_device(void)
 static int ezx_blob_recv_reply(void)
 {
 	char buf[8192];
-	int ret;
+	int ret, i;
 
 	memset(buf, 0, sizeof(buf));
 
 	ret = usb_bulk_read(hdl, EZX_IN_EP, buf, sizeof(buf), 0);
+
+	for (i = 0; i < ret; i ++)
+		if (buf[i] == 0x03)
+			buf[i] = 0x00;
 
 	printf("RX: %s (%s)\n", buf, hexdump(buf, ret));
 
@@ -173,9 +177,15 @@ static int ezx_blob_cmd_bin(char *data, u_int16_t size)
 {
 	char buf[8192+2+1];
 	u_int8_t csum;
+	int rem = size % 8;
+
+	if (rem)
+		size += rem;
 
 	if (size > 8192)
 		return -1;
+
+	memset(buf, 0, sizeof(buf));
 
 	*(u_int16_t *)buf = htons(size);
 	memcpy(buf+2, data, size);
@@ -220,6 +230,7 @@ int main(int argc, char **argv)
 	char *filename, *prog;
 	struct stat st;
 	int fd;
+	u_int32_t word = 0x7c7c7c7c;
 
 	usb_init();
 	if (!usb_find_busses())
@@ -265,6 +276,12 @@ int main(int argc, char **argv)
 		exit(1);
 
 	//ezx_blob_send_command("RQHW", NULL, 0);
+
+#if 0
+	/* doesn't work because of address restrictions */
+	ezx_blob_cmd_addr(0xa000000);
+	ezx_blob_cmd_bin(&word, 4);
+#endif
 
 	ezx_blob_load_program(KERNEL_RAM_BASE, prog, st.st_size);
 
