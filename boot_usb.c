@@ -1,6 +1,21 @@
 /* ezx_boot_usb - Ram Loader for Motorola EZX phones
  * (C) 2006 by Harald Welte <laforge@gnumonks.org>
  *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License version 2 
+ *  as published by the Free Software Foundation
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+
+/*
  * This program allows you to download executable code from the PC to the phone
  * RAM.  After downloading it, the code can be executed.
  *
