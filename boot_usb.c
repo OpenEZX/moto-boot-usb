@@ -19,9 +19,9 @@
  * This program allows you to download executable code from the PC to the phone
  * RAM.  After downloading it, the code can be executed.
  *
- * In order to make this work, the phone must be running in the bootloader, rather
- * than the regular OS.  To achieve this, push both the jogdial button and the
- * photo button while pressing power-on (A780).
+ * In order to make this work, the phone must be running in the bootloader,
+ * rather than the regular OS.  To achieve this, push both the jogdial button
+ * and the photo button while pressing power-on (A780).
  *
  */
 
@@ -139,7 +139,7 @@ static int ezx_blob_send_command(char *command, char *payload, int len)
 	/* this usleep is required in order to make the process work.
 	 * apparently some race condition in the bootloader if we feed
 	 * data too fast */
-	usleep(25000);
+	usleep(5000);
 
 	return ezx_blob_recv_reply();
 }
