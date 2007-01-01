@@ -1,0 +1,9 @@
+0.1.0
+	* Initial release.
+	* Support for the following phones:
+	  * A780
+	  * E680(i)
+	  * ROKR E2
+	  * A1200 (Not sure, please test and report)
+
+Stefan Schmidt <stefan@datenfreihafen.org>
