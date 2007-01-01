@@ -1,5 +1,9 @@
 /* ezx_boot_usb - Ram Loader for Motorola EZX phones
+ *
  * (C) 2006 by Harald Welte <laforge@gnumonks.org>
+ * (C) 2006 by Stefan Schmidt <stefan@datenfreihafen.org>
+ *
+ * 	ROKR E2 support from Wang YongLai <dotmonkey@gmail.com>
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License version 2 
@@ -22,6 +26,9 @@
  * In order to make this work, the phone must be running in the bootloader,
  * rather than the regular OS.  To achieve this, push both the jogdial button
  * and the photo button while pressing power-on (A780).
+ *
+ * A complete list how to enter the bootloader can be found here:
+ * http://wiki.openezx.org/Bootloader
  *
  */
 
@@ -57,14 +64,28 @@ hexdump(const void *data, unsigned int len)
 }
 
 #define EZX_VENDOR_ID	0x22b8
-#define EZX_PRODUCT_ID	0x6003
-#define EZX_OUT_EP	0x02
-#define EZX_IN_EP	0x81
+#define EZX_PRODUCT_ID_A780	0x6003
+#define EZX_PRODUCT_ID_E2	0x6023
+#define EZX_OUT_EP_A780	0x02
+#define EZX_IN_EP_A780	0x81
+#define EZX_OUT_EP_E2	0x01
+#define EZX_IN_EP_E2	0x82
 
 #define NUL	0x00
 #define STX	0x02
 #define	ETX	0x03
 #define	RS	0x1E
+
+enum phone_type
+{ 
+	PHONE_A780,
+	PHONE_E2,
+	PHONE_UNKNOWN
+};
+
+enum phone_type ptype;
+int ezx_in_ep, ezx_out_ep;
+
 
 static struct usb_dev_handle *hdl;
 static struct usb_device *find_ezx_device(void)
@@ -74,13 +95,31 @@ static struct usb_device *find_ezx_device(void)
 	for (bus = usb_busses; bus; bus = bus->next) {
 		struct usb_device *dev;
 		for (dev = bus->devices; dev; dev = dev->next) {
-			if (dev->descriptor.idVendor == EZX_VENDOR_ID
-			    && dev->descriptor.idProduct == EZX_PRODUCT_ID
-			    && dev->descriptor.iManufacturer == 1
+			if (dev->descriptor.idVendor == EZX_VENDOR_ID)
+			{
+				switch(dev->descriptor.idProduct) {
+					case EZX_PRODUCT_ID_E2:
+						printf("E2 found.\n");
+						ptype = PHONE_E2;
+						ezx_in_ep = EZX_IN_EP_E2;
+						ezx_out_ep = EZX_OUT_EP_E2;
+						break;
+					case EZX_PRODUCT_ID_A780:
+						printf("A780 found.\n");
+						ptype = PHONE_A780;
+						ezx_in_ep = EZX_IN_EP_A780;
+						ezx_out_ep = EZX_OUT_EP_A780;
+						break;
+					default:
+						ptype=PHONE_UNKNOWN;
+						break;
+				}
+			}
+			if (dev->descriptor.iManufacturer == 1
 			    && dev->descriptor.iProduct == 2
 			    && dev->descriptor.bNumConfigurations == 1
 			    && dev->config->bNumInterfaces == 1
-			    && dev->config->iConfiguration == 5)
+			    && (dev->config->iConfiguration == 4 || dev->config->iConfiguration == 5)) 
 				return dev;
 		}
 	}
@@ -94,7 +133,7 @@ static int ezx_blob_recv_reply(void)
 
 	memset(buf, 0, sizeof(buf));
 
-	ret = usb_bulk_read(hdl, EZX_IN_EP, buf, sizeof(buf), 0);
+	ret = usb_bulk_read(hdl, ezx_in_ep, buf, sizeof(buf), 0);
 
 	for (i = 0; i < ret; i ++)
 		if (buf[i] == 0x03)
@@ -132,7 +171,7 @@ static int ezx_blob_send_command(char *command, char *payload, int len)
 	else
 		printf("TX: %s (%s)\n", buf,  hexdump(buf, cur));
 
-	ret = usb_bulk_write(hdl, EZX_OUT_EP, buf, cur, 0);
+	ret = usb_bulk_write(hdl, ezx_out_ep, buf, cur, 0);
 	if (ret < 0)
 		return ret;
 
@@ -194,8 +233,10 @@ static int ezx_blob_cmd_bin(char *data, u_int16_t size)
 	u_int8_t csum;
 	int rem = size % 8;
 
+/* FIXME: Any difference between (8 - rem) and rem here? */
 	if (rem)
-		size += rem;
+		size += (8 - rem);
+//		size += rem;
 
 	if (size > 8192)
 		return -1;
@@ -236,16 +277,12 @@ static struct option opts[] = {
 	{ 0, 0, 0, 0 },
 };
 
-#define KERNEL_RAM_BASE	0xA0200000
-
-
-int main(int argc, char **argv)
+int main(int argc, char *argv[])
 {
 	struct usb_device *dev;
 	char *filename, *prog;
 	struct stat st;
-	int fd;
-	u_int32_t word = 0x7c7c7c7c;
+	int fd, addr;
 
 	usb_init();
 	if (!usb_find_busses())
@@ -289,21 +326,22 @@ int main(int argc, char **argv)
 	prog = mmap(NULL, st.st_size, PROT_READ, MAP_SHARED, fd, 0);
 	if (!prog)
 		exit(1);
-
-	//ezx_blob_send_command("RQHW", NULL, 0);
-
-#if 0
-	/* doesn't work because of address restrictions */
-	ezx_blob_cmd_addr(0xa000000);
-	ezx_blob_cmd_bin(&word, 4);
-#endif
-
-	ezx_blob_load_program(KERNEL_RAM_BASE, prog, st.st_size);
-
-	ezx_blob_cmd_jump(KERNEL_RAM_BASE);
-
-	//ezx_blob_send_command("RQHW", NULL, 0);
-	//ezx_blob_recv_reply();
+	
+	ezx_blob_send_command("RQSN", NULL, 0);
+	ezx_blob_send_command("RQVN", NULL, 0);
+	
+	switch (ptype) {
+		case PHONE_E2:
+			addr = 0xa0de0000;
+			break;
+		case PHONE_A780:
+			addr = 0xa0200000;
+			break;
+		default:
+			printf("No default load address for your phone\n");
+		}
+	ezx_blob_load_program(addr, prog, st.st_size);
+	ezx_blob_cmd_jump(addr);
 	//ezx_blob_send_command("POWER_DOWN", NULL, 0);
 	//ezx_blob_recv_reply();
 
