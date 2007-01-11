@@ -19,3 +19,11 @@ presents red screen with black text on it in bootloader mode.
 If your EZX phone is not listed here you have perhaps more luck on our wiki:
 
 http://wiki.openezx.org/Bootloader
+
+COMPILING
+---------
+
+You need to have the libusb-devel package installed. We recommend version >=
+0.1.12
+
+If the package is installed s simple 'make' should be everything you need.
