@@ -30,6 +30,8 @@
  * A complete list how to enter the bootloader can be found here:
  * http://wiki.openezx.org/Bootloader
  *
+ *  Mar 4, 2007 - (Daniel Ribeiro) Added support for Blob2 boot on A780
+ *
  */
 
 #include <stdio.h>
@@ -66,6 +68,8 @@ hexdump(const void *data, unsigned int len)
 #define EZX_VENDOR_ID	0x22b8
 #define EZX_PRODUCT_ID_A780	0x6003
 #define EZX_PRODUCT_ID_E2	0x6023
+#define EZX_PRODUCT_ID_A780_SECOND_BLOB 0x6021
+
 #define EZX_OUT_EP_A780	0x02
 #define EZX_IN_EP_A780	0x81
 #define EZX_OUT_EP_E2	0x01
@@ -80,6 +84,7 @@ enum phone_type
 { 
 	PHONE_A780,
 	PHONE_E2,
+	PHONE_A780_SECOND_BLOB,
 	PHONE_UNKNOWN
 };
 
@@ -107,6 +112,12 @@ static struct usb_device *find_ezx_device(void)
 					case EZX_PRODUCT_ID_A780:
 						printf("A780 found.\n");
 						ptype = PHONE_A780;
+						ezx_in_ep = EZX_IN_EP_A780;
+						ezx_out_ep = EZX_OUT_EP_A780;
+						break;
+					case EZX_PRODUCT_ID_A780_SECOND_BLOB:
+						printf("A780 Blob2 found.\n");
+						ptype = PHONE_A780_SECOND_BLOB;
 						ezx_in_ep = EZX_IN_EP_A780;
 						ezx_out_ep = EZX_OUT_EP_A780;
 						break;
@@ -336,6 +347,9 @@ int main(int argc, char *argv[])
 			break;
 		case PHONE_A780:
 			addr = 0xa0200000;
+			break;
+		case PHONE_A780_SECOND_BLOB:
+			addr = 0xa0400000;
 			break;
 		default:
 			printf("No default load address for your phone\n");
