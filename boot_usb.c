@@ -104,13 +104,13 @@ static struct usb_device *find_ezx_device(void)
 			{
 				switch(dev->descriptor.idProduct) {
 					case EZX_PRODUCT_ID_E2:
-						printf("E2 found.\n");
+						printf("A1200/E2 found.\n");
 						ptype = PHONE_E2;
 						ezx_in_ep = EZX_IN_EP_E2;
 						ezx_out_ep = EZX_OUT_EP_E2;
 						break;
 					case EZX_PRODUCT_ID_A780:
-						printf("A780 found.\n");
+						printf("A780/E680/E680i found.\n");
 						ptype = PHONE_A780;
 						ezx_in_ep = EZX_IN_EP_A780;
 						ezx_out_ep = EZX_OUT_EP_A780;
