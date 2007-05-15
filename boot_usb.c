@@ -3,10 +3,10 @@
  * (C) 2006 by Harald Welte <laforge@gnumonks.org>
  * (C) 2006 by Stefan Schmidt <stefan@datenfreihafen.org>
  *
- * 	ROKR E2 support from Wang YongLai <dotmonkey@gmail.com>
+ *	ROKR E2 support from Wang YongLai <dotmonkey@gmail.com>
  *
  *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License version 2 
+ *  it under the terms of the GNU General Public License version 2
  *  as published by the Free Software Foundation
  *
  *  This program is distributed in the hope that it will be useful,
@@ -81,7 +81,7 @@ hexdump(const void *data, unsigned int len)
 #define	RS	0x1E
 
 enum phone_type
-{ 
+{
 	PHONE_A780,
 	PHONE_E2,
 	PHONE_A780_SECOND_BLOB,
@@ -129,7 +129,7 @@ static struct usb_device *find_ezx_device(void)
 			    && dev->descriptor.iProduct == 2
 			    && dev->descriptor.bNumConfigurations == 1
 			    && dev->config->bNumInterfaces == 1
-			    && (dev->config->iConfiguration == 4 || dev->config->iConfiguration == 5)) 
+			    && (dev->config->iConfiguration == 4 || dev->config->iConfiguration == 5))
 				return dev;
 			}
 		}
@@ -267,8 +267,8 @@ static int ezx_blob_load_program(u_int32_t addr, char *data, int size)
 	u_int32_t cur_addr;
 	char *cur_data;
 
-	for (cur_addr = addr, cur_data = data; 
-	     cur_addr < addr+size; 
+	for (cur_addr = addr, cur_data = data;
+	     cur_addr < addr+size;
 	     cur_addr += CHUNK_SIZE, cur_data += CHUNK_SIZE) {
 		int remain = (data + size) - cur_data;
 		if (remain > CHUNK_SIZE)
@@ -337,10 +337,10 @@ int main(int argc, char *argv[])
 	prog = mmap(NULL, st.st_size, PROT_READ, MAP_SHARED, fd, 0);
 	if (!prog)
 		exit(1);
-	
+
 	ezx_blob_send_command("RQSN", NULL, 0);
 	ezx_blob_send_command("RQVN", NULL, 0);
-	
+
 	switch (ptype) {
 		case PHONE_E2:
 			addr = 0xa0de0000;
