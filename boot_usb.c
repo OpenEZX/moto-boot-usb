@@ -125,13 +125,13 @@ static struct usb_device *find_ezx_device(void)
 						ptype=PHONE_UNKNOWN;
 						break;
 				}
-			}
-			if (dev->descriptor.iManufacturer == 1
+			  if (dev->descriptor.iManufacturer == 1
 			    && dev->descriptor.iProduct == 2
 			    && dev->descriptor.bNumConfigurations == 1
 			    && dev->config->bNumInterfaces == 1
 			    && (dev->config->iConfiguration == 4 || dev->config->iConfiguration == 5)) 
 				return dev;
+			}
 		}
 	}
 	return NULL;
