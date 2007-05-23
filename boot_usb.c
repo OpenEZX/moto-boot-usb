@@ -3,10 +3,8 @@
  * (C) 2006 by Harald Welte <laforge@gnumonks.org>
  * (C) 2006 by Stefan Schmidt <stefan@datenfreihafen.org>
  *
- *	ROKR E2 support from Wang YongLai <dotmonkey@gmail.com>
- *
  *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License version 2
+ *  it under the terms of the GNU General Public License version 2 
  *  as published by the Free Software Foundation
  *
  *  This program is distributed in the hope that it will be useful,
@@ -17,6 +15,14 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
+ * CONTRIBUTORS:
+ *  	Wang YongLai <dotmonkey@gmail.com>
+ *  			ROKR E2 support
+ *  	Daniel Ribeiro <drwyrm@gmail.com>
+ *  			Added support for Blob2 boot on A780
+ *  			Ramdisk upload support
+ *
  */
 
 /*
@@ -29,8 +35,6 @@
  *
  * A complete list how to enter the bootloader can be found here:
  * http://wiki.openezx.org/Bootloader
- *
- *  Mar 4, 2007 - (Daniel Ribeiro) Added support for Blob2 boot on A780
  *
  */
 
@@ -45,6 +49,7 @@
 #include <sys/stat.h>
 #include <sys/mman.h>
 #include <fcntl.h>
+#include <arpa/inet.h>
 
 #include <usb.h>
 
@@ -65,32 +70,31 @@ hexdump(const void *data, unsigned int len)
 	return string;
 }
 
-#define EZX_VENDOR_ID	0x22b8
-#define EZX_PRODUCT_ID_A780	0x6003
-#define EZX_PRODUCT_ID_E2	0x6023
-#define EZX_PRODUCT_ID_A780_SECOND_BLOB 0x6021
+struct phonetype {
+	char *name;
+	u_int16_t product_id;
+	u_int8_t out_ep;
+	u_int8_t in_ep;
+	u_int32_t kernel_addr;
+	u_int32_t ramdisk_addr;
+	u_int32_t reserved; /* for kernel parameters */
+};
 
-#define EZX_OUT_EP_A780	0x02
-#define EZX_IN_EP_A780	0x81
-#define EZX_OUT_EP_E2	0x01
-#define EZX_IN_EP_E2	0x82
+#define EZX_VENDOR_ID 0x22b8
+struct phonetype phonetypes[] = {
+	{ "A780/E680",		0x6003, 0x02, 0x81, 0xa0200000, 0xa0400000, 0 },
+	{ "A780/E680 Blob2",	0x6021, 0x02, 0x81, 0xa0300000, 0xa0500000, 0 },
+	{ "E2/A1200/E6",	0x6023, 0x02, 0x82, 0xa0de0000, /*FIXME*/0, 0 },
+
+	{ "Unknown",		0x0000, 0x00, 0x00, 0x00000000, 0x00000000, 0 }
+};
 
 #define NUL	0x00
 #define STX	0x02
 #define	ETX	0x03
 #define	RS	0x1E
 
-enum phone_type
-{
-	PHONE_A780,
-	PHONE_E2,
-	PHONE_A780_SECOND_BLOB,
-	PHONE_UNKNOWN
-};
-
-enum phone_type ptype;
-int ezx_in_ep, ezx_out_ep;
-
+struct phonetype phone = { "Unknown", 0, 0, 0, 0, 0, 0 };
 
 static struct usb_dev_handle *hdl;
 static struct usb_device *find_ezx_device(void)
@@ -102,36 +106,21 @@ static struct usb_device *find_ezx_device(void)
 		for (dev = bus->devices; dev; dev = dev->next) {
 			if (dev->descriptor.idVendor == EZX_VENDOR_ID)
 			{
-				switch(dev->descriptor.idProduct) {
-					case EZX_PRODUCT_ID_E2:
-						printf("A1200/ROKR E2/ROKR E6 found.\n");
-						ptype = PHONE_E2;
-						ezx_in_ep = EZX_IN_EP_E2;
-						ezx_out_ep = EZX_OUT_EP_E2;
-						break;
-					case EZX_PRODUCT_ID_A780:
-						printf("A780/E680/E680i found.\n");
-						ptype = PHONE_A780;
-						ezx_in_ep = EZX_IN_EP_A780;
-						ezx_out_ep = EZX_OUT_EP_A780;
-						break;
-					case EZX_PRODUCT_ID_A780_SECOND_BLOB:
-						printf("A780 Blob2 found.\n");
-						ptype = PHONE_A780_SECOND_BLOB;
-						ezx_in_ep = EZX_IN_EP_A780;
-						ezx_out_ep = EZX_OUT_EP_A780;
-						break;
-					default:
-						ptype=PHONE_UNKNOWN;
-						break;
+				int n;
+				for (n=0;phonetypes[n].product_id!=0;n++) {
+					if (dev->descriptor.idProduct == phonetypes[n].product_id)
+						phone = phonetypes[n];
 				}
-			  if (dev->descriptor.iManufacturer == 1
+				if (phone.product_id == 0)
+					return NULL;
+				printf("%s found.\n", phone.name);
+			}
+			if (dev->descriptor.iManufacturer == 1
 			    && dev->descriptor.iProduct == 2
 			    && dev->descriptor.bNumConfigurations == 1
 			    && dev->config->bNumInterfaces == 1
-			    && (dev->config->iConfiguration == 4 || dev->config->iConfiguration == 5))
+			    && (dev->config->iConfiguration == 4 || dev->config->iConfiguration == 5)) 
 				return dev;
-			}
 		}
 	}
 	return NULL;
@@ -144,7 +133,7 @@ static int ezx_blob_recv_reply(void)
 
 	memset(buf, 0, sizeof(buf));
 
-	ret = usb_bulk_read(hdl, ezx_in_ep, buf, sizeof(buf), 0);
+	ret = usb_bulk_read(hdl, phone.in_ep, buf, sizeof(buf), 0);
 
 	for (i = 0; i < ret; i ++)
 		if (buf[i] == 0x03)
@@ -182,7 +171,7 @@ static int ezx_blob_send_command(char *command, char *payload, int len)
 	else
 		printf("TX: %s (%s)\n", buf,  hexdump(buf, cur));
 
-	ret = usb_bulk_write(hdl, ezx_out_ep, buf, cur, 0);
+	ret = usb_bulk_write(hdl, phone.out_ep, buf, cur, 0);
 	if (ret < 0)
 		return ret;
 
@@ -241,7 +230,7 @@ static int ezx_blob_cmd_jump(u_int32_t addr)
 static int ezx_blob_cmd_bin(char *data, u_int16_t size)
 {
 	char buf[8192+2+1];
-	u_int8_t csum;
+//	u_int8_t csum;
 	int rem = size % 8;
 
 /* FIXME: Any difference between (8 - rem) and rem here? */
@@ -267,8 +256,13 @@ static int ezx_blob_load_program(u_int32_t addr, char *data, int size)
 	u_int32_t cur_addr;
 	char *cur_data;
 
-	for (cur_addr = addr, cur_data = data;
-	     cur_addr < addr+size;
+	if(!addr) {
+		printf("No load address defined\n");
+		return -1;
+	}
+
+	for (cur_addr = addr, cur_data = data; 
+	     cur_addr < addr+size; 
 	     cur_addr += CHUNK_SIZE, cur_data += CHUNK_SIZE) {
 		int remain = (data + size) - cur_data;
 		if (remain > CHUNK_SIZE)
@@ -279,21 +273,15 @@ static int ezx_blob_load_program(u_int32_t addr, char *data, int size)
 		if (ezx_blob_cmd_bin(cur_data, remain) < 0)
 			break;
 	}
+	return 0;
 }
-
-static struct option opts[] = {
-	{ "load", 1, 0, 'l' },
-	{ "exec", 0, 0, 'e' },
-	{ "off", 0, 0, 'o' },
-	{ 0, 0, 0, 0 },
-};
 
 int main(int argc, char *argv[])
 {
 	struct usb_device *dev;
-	char *filename, *prog;
+	char *prog;
 	struct stat st;
-	int fd, addr;
+	int fd;
 
 	usb_init();
 	if (!usb_find_busses())
@@ -307,6 +295,11 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
+	if (argc < 2) {
+		printf("usage: %s <kernel> [ramdisk]\n", argv[0]);
+		exit(2);
+	}
+
 	hdl = usb_open(dev);
 	if (!hdl) {
 		printf("Unable to open usb device: %s\n", usb_strerror());
@@ -318,18 +311,12 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
-	filename = argv[1];
-	if (!filename) {
-		printf("You have to specify the file you want to flash\n");
-		exit(2);
-	}
-
-	fd = open(filename, O_RDONLY);
+	fd = open(argv[1], O_RDONLY);
 	if (fd < 0)
 		exit(2);
 
 	if (fstat(fd, &st) < 0) {
-		printf("Error to access file `%s': %s\n", filename, strerror(errno));
+		printf("Error to access file `%s': %s\n", argv[1], strerror(errno));
 		exit(2);
 	}
 
@@ -337,25 +324,31 @@ int main(int argc, char *argv[])
 	prog = mmap(NULL, st.st_size, PROT_READ, MAP_SHARED, fd, 0);
 	if (!prog)
 		exit(1);
-
+	
 	ezx_blob_send_command("RQSN", NULL, 0);
 	ezx_blob_send_command("RQVN", NULL, 0);
+	ezx_blob_load_program(phone.kernel_addr, prog, st.st_size);
 
-	switch (ptype) {
-		case PHONE_E2:
-			addr = 0xa0de0000;
-			break;
-		case PHONE_A780:
-			addr = 0xa0200000;
-			break;
-		case PHONE_A780_SECOND_BLOB:
-			addr = 0xa0400000;
-			break;
-		default:
-			printf("No default load address for your phone\n");
+	munmap(prog, st.st_size);
+	close(fd);
+	prog = NULL;
+
+	/* Send ramdisk */
+	if (argc > 2) {
+		fd = open(argv[2], O_RDONLY);
+		if (fd < 0 || fstat(fd, &st) < 0)
+			printf("File error (%s): %s\n", argv[2], strerror(errno));
+		else
+			prog = mmap(NULL, st.st_size, PROT_READ, MAP_SHARED, fd, 0);
+		if (prog) {
+			ezx_blob_load_program(phone.ramdisk_addr, prog, st.st_size);
+			munmap(prog, st.st_size);
 		}
-	ezx_blob_load_program(addr, prog, st.st_size);
-	ezx_blob_cmd_jump(addr);
+		if(fd) close(fd);
+		prog = NULL;
+	}
+
+	ezx_blob_cmd_jump(phone.kernel_addr);
 	//ezx_blob_send_command("POWER_DOWN", NULL, 0);
 	//ezx_blob_recv_reply();
 

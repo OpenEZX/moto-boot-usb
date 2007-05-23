@@ -1,5 +1,6 @@
 #!/usr/bin/make
 LDFLAGS=-lusb
+CFLAGS=-Wall
 
 all: boot_usb
 
