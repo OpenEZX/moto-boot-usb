@@ -1,6 +1,7 @@
-#!/usr/bin/make
+INC ?= /home/wyrm/openezx/linux-2.6.21/include
+
 LDFLAGS=-lusb
-CFLAGS=-Wall
+CFLAGS=-Wall -I$(INC)
 
 all: boot_usb
 
