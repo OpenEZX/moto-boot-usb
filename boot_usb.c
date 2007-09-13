@@ -148,7 +148,7 @@ static int ezx_blob_recv_reply(void)
 
 	ret = usb_bulk_read(hdl, phone.in_ep, buf, sizeof(buf), 0);
 
-	for (i = 0; i < ret; i ++)
+	for (i = 0; i < ret; i++)
 		if (buf[i] == 0x03)
 			buf[i] = 0x00;
 
@@ -340,6 +340,15 @@ int main(int argc, char *argv[])
 	/* mmap kernel image passed as parameter */
 	if (!(prog = mmap(NULL, st.st_size, PROT_READ, MAP_SHARED, fd, 0))) {
 		error("mmap error: %s", strerror(errno));
+		goto poweroff;
+	}
+
+	/* 
+	 * flush any unsolicited information from blob,
+	 * needed for 2nd gen phones. Thanks LuitvD.
+	 */
+	if (phone.product_id == 0x6023 && (ezx_blob_recv_reply() < 0)) {
+		error("flush unsolicited");
 		goto poweroff;
 	}
 
