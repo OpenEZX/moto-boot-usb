@@ -26,4 +26,5 @@ COMPILING
 You need to have the libusb-devel package installed. We recommend version >=
 0.1.12
 
-If the package is installed s simple 'make' should be everything you need.
+You need to specify the kernel include folder when compiling.
+make INC=/home/user/openezx/linux-2.6.21/include
