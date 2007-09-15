@@ -347,12 +347,12 @@ int main(int argc, char *argv[])
 	 * flush any unsolicited information from blob,
 	 * needed for 2nd gen phones. Thanks LuitvD.
 	 */
-	if (phone.product_id == 0x6023 && (ezx_blob_recv_reply() < 0)) {
+/*	if (phone.product_id == 0x6023 && (ezx_blob_recv_reply() < 0)) {
 		error("flush unsolicited");
 		goto poweroff;
 	}
-
-#ifdef DEBUG /* query information only if debugging */
+*/
+//#ifdef DEBUG /* query information only if debugging */
 	if (ezx_blob_send_command("RQSN", NULL, 0) < 0) {
 		error("RQSN");
 		goto poweroff;
@@ -361,7 +361,7 @@ int main(int argc, char *argv[])
 		error("RQVN");
 		goto poweroff;
 	}
-#endif
+//#endif
 	info("Uploading kernel:     ");
 	if (ezx_blob_load_program(phone.kernel_addr, prog, st.st_size) < 0) {
 		error("kernel upload failed");
