@@ -97,7 +97,7 @@ struct phonetype {
 struct phonetype phonetypes[] = {
 { "A780/E680",        0x6003, 0x02, 0x81, 0xa0200000, 0xa0400000, 0xa0000100 },
 { "A780/E680 Blob2",  0x6021, 0x02, 0x81, 0xa0300000, 0xa0500000, 0xa0000100 },
-{ "E2/A1200/E6/A910", 0x6023, 0x01, 0x82, 0xa0de0000, /*FIXME*/0, 0xa0000100 },
+{ "E2/A1200/E6/A910", 0x6023, 0x01, 0x82, 0xa0de0000, /*FIXME*/0, 0xa0f60000 }, /* this params_addr doesnt work */
 
 { "Unknown",          0x0000, 0x00, 0x00, 0x00000000, 0x00000000, 0x00000000 }
 };
@@ -266,7 +266,7 @@ static int ezx_blob_cmd_bin(char *data, u_int16_t size)
 }
 
 #define CHUNK_SIZE 4096
-static int ezx_blob_load_program(u_int32_t addr, char *data, int size)
+static int ezx_blob_load_program(u_int16_t phone_id, u_int32_t addr, char *data, int size)
 {
 	u_int32_t cur_addr;
 	char *cur_data;
@@ -278,7 +278,11 @@ static int ezx_blob_load_program(u_int32_t addr, char *data, int size)
 	for (cur_addr = addr, cur_data = data; 
 	     cur_addr < addr+size; 
 	     cur_addr += CHUNK_SIZE, cur_data += CHUNK_SIZE) {
-		int remain = (data + size) - cur_data;
+		int remain;
+		if (phone_id == 0x6023) /* A1200 */
+			remain = 4096;
+		else
+			remain = (data + size) - cur_data;
 		if (remain > CHUNK_SIZE)
 			remain = CHUNK_SIZE;
 
@@ -363,7 +367,7 @@ int main(int argc, char *argv[])
 	}
 //#endif
 	info("Uploading kernel:     ");
-	if (ezx_blob_load_program(phone.kernel_addr, prog, st.st_size) < 0) {
+	if (ezx_blob_load_program(phone.product_id, phone.kernel_addr, prog, st.st_size) < 0) {
 		error("kernel upload failed");
 		goto poweroff;
 	}
@@ -417,7 +421,7 @@ int main(int argc, char *argv[])
 		goto poweroff;
 	}
 	info("Uploading initrd:     ");
-	if (ezx_blob_load_program(phone.initrd_addr, prog, st.st_size) < 0) {
+	if (ezx_blob_load_program(phone.product_id, phone.initrd_addr, prog, st.st_size) < 0) {
 		error("initrd upload failed");
 		goto poweroff;
 	}
@@ -436,7 +440,7 @@ send_params:
 	tag->hdr.tag = ATAG_NONE;
 	tag->hdr.size = 0;
 	info ("Uploading params:     ");
-	if (ezx_blob_load_program(phone.params_addr, (void *) first_tag, tagsize) < 0) {
+	if (ezx_blob_load_program(phone.product_id, phone.params_addr, (void *) first_tag, tagsize) < 0) {
 		error("params upload failed");
 		goto poweroff;
 	}
