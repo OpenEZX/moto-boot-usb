@@ -91,16 +91,21 @@ struct phonetype {
 	u_int32_t kernel_addr;
 	u_int32_t initrd_addr;
 	u_int32_t params_addr;
+	char *code;
+	int code_size;
 };
+
+#define pxa_code "\x08\x10\x9F\xE5\x0C\x00\x4F\xE2\x01\x0A\x80\xE2\x00\xF0\xA0\xE1"
+#define pxa_code_s 16
 
 #define EZX_VENDOR_ID 0x22b8
 struct phonetype phonetypes[] = {
-{ "A780/E680",        0x6003, 0x02, 0x81, 0xa0200000, 0xa0400000, 0xa0000100 },
-{ "A780/E680 Blob2",  0x6021, 0x02, 0x81, 0xa0300000, 0xa0500000, 0xa0000100 },
-{ "E2/A1200/E6/A910", 0x6023, 0x01, 0x82, 0xa0de0000, /*FIXME*/0, 0xa0f60000 }, /* this params_addr doesnt work */
-{ "RAZR2 V8",         0x6403, 0x01, 0x82, 0xa0de0000, /*FIXME*/0, 0 }, /* XXX Address is just copied from E2/A1200 and not known to work */
+{ "A780/E680",        0x6003, 0x02, 0x81, 0xa0200000, 0xa0400000, 0xa0000100, pxa_code, pxa_code_s },
+{ "A780/E680 Blob2",  0x6021, 0x02, 0x81, 0xa0300000, 0xa0500000, 0xa0000100, pxa_code, pxa_code_s },
+{ "E2/A1200/E6/A910", 0x6023, 0x01, 0x82, 0xa0de0000, /*FIXME*/0, 0xa0f60000, pxa_code, pxa_code_s }, /* this params_addr doesnt work */
+{ "RAZR2 V8",         0x6403, 0x01, 0x82, 0xa0de0000, /*FIXME*/0, /*FIXME*/0, NULL, 0 }, /* XXX Address is just copied from E2/A1200 and not known to work */
 
-{ "Unknown",          0x0000, 0x00, 0x00, 0x00000000, 0x00000000, 0x00000000 }
+{ "Unknown",          0x0000, 0x00, 0x00, 0x00000000, 0x00000000, 0x00000000, NULL, 	0 }
 };
 
 #define NUL	0x00
@@ -191,10 +196,8 @@ static int ezx_blob_send_command(char *command, char *payload, int len)
 	/* this usleep is required in order to make the process work.
 	 * apparently some race condition in the bootloader if we feed
 	 * data too fast 
-	 * 
-	 * Works without for me -WM
 	 */
-	/* usleep(5000); */
+	 usleep(5000);
 
 	return ezx_blob_recv_reply();
 }
@@ -310,6 +313,9 @@ int main(int argc, char *argv[])
 	struct tag *tag;
 	struct tag *first_tag;
 	int tagsize;
+	char *asm_code;
+	int k_offset = 0;
+	int mach_id = 867; /* 867 is the old EZX mach id */
 
 	usb_init();
 	if (!usb_find_busses())
@@ -323,7 +329,7 @@ int main(int argc, char *argv[])
 		goto exit;
 	}
 	if (argc < 2) {
-		error("usage: %s <kernel> [cmdline] [initrd]", argv[0]);
+		error("usage: %s <kernel> [machid] [cmdline] [initrd]", argv[0]);
 		goto exit;
 	}
 	if (!(hdl = usb_open(dev))) {
@@ -348,15 +354,6 @@ int main(int argc, char *argv[])
 		goto poweroff;
 	}
 
-	/* 
-	 * flush any unsolicited information from blob,
-	 * needed for 2nd gen phones. Thanks LuitvD.
-	 */
-/*	if (phone.product_id == 0x6023 && (ezx_blob_recv_reply() < 0)) {
-		error("flush unsolicited");
-		goto poweroff;
-	}
-*/
 //#ifdef DEBUG /* query information only if debugging */
 	if (ezx_blob_send_command("RQSN", NULL, 0) < 0) {
 		error("RQSN");
@@ -367,8 +364,28 @@ int main(int argc, char *argv[])
 		goto poweroff;
 	}
 //#endif
+	if (argc >=3)
+		mach_id = atoi(argv[2]);
+	
+	if (phone.code_size > 0) {
+		info("Sending mach id code %d:     ", mach_id);
+		if ((asm_code = malloc(CHUNK_SIZE)) == NULL) {
+			error("failed to alloc memory");
+			goto poweroff;
+		}
+		memset(asm_code, 0, sizeof(asm_code));
+		memcpy(asm_code, phone.code, phone.code_size);
+		*(u_int32_t *)(asm_code+phone.code_size) = mach_id;
+	
+		if (ezx_blob_load_program(phone.product_id, phone.kernel_addr, asm_code, CHUNK_SIZE) < 0) {
+			error("asm code send failed");
+			goto poweroff;
+		}
+		k_offset += 4096;
+	}
+
 	info("Uploading kernel:     ");
-	if (ezx_blob_load_program(phone.product_id, phone.kernel_addr, prog, st.st_size) < 0) {
+	if (ezx_blob_load_program(phone.product_id, phone.kernel_addr+k_offset, prog, st.st_size) < 0) {
 		error("kernel upload failed");
 		goto poweroff;
 	}
@@ -377,18 +394,18 @@ int main(int argc, char *argv[])
 	close(fd);
 	prog = NULL;
 
-	if (argc < 3)
+	if (argc < 4)
 		goto run_kernel;
 
 	/* send boot_params */
-	if (argc >= 4)		/* with initrd - 4 tags */
+	if (argc >= 5)		/* with initrd - 4 tags */
 		tagsize = sizeof(struct tag_header) * 4 +
 					sizeof(struct tag_initrd);
 	else			/* cmdline only - 3 tags */
 		tagsize = sizeof(struct tag_header) * 3;
 	/* cmdline string */
-	tagsize += (strlen(argv[2]) > COMMAND_LINE_SIZE ? COMMAND_LINE_SIZE :
-		strlen(argv[2])) + 5;
+	tagsize += (strlen(argv[3]) > COMMAND_LINE_SIZE ? COMMAND_LINE_SIZE :
+		strlen(argv[3])) + 5;
 
 	if (!(tag = malloc(tagsize))) {
 		error("cannot alloc %d bytes for params", tagsize);
@@ -405,16 +422,16 @@ int main(int argc, char *argv[])
 	tag = tag_next(tag);
 	tag->hdr.tag = ATAG_CMDLINE;
 	tag->hdr.size = ((sizeof(struct tag_header) +
-				strlen(argv[2]) + 5) >> 2);
-	strncpy(tag->u.cmdline.cmdline, argv[2], COMMAND_LINE_SIZE);
+				strlen(argv[3]) + 5) >> 2);
+	strncpy(tag->u.cmdline.cmdline, argv[3], COMMAND_LINE_SIZE);
 	
-	if (argc < 4)
+	if (argc < 5)
 		goto send_params;
 	
 	/* Send initrd */
-	fd = open(argv[3], O_RDONLY);
+	fd = open(argv[4], O_RDONLY);
 	if (fd < 0 || fstat(fd, &st) < 0) {
-		error("%s: %s", argv[3], strerror(errno));
+		error("%s: %s", argv[4], strerror(errno));
 		goto poweroff;
 	}
 	if (!(prog = mmap(NULL, st.st_size, PROT_READ, MAP_SHARED, fd, 0))) {
