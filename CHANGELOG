@@ -1,3 +1,9 @@
+0.2 - 13/09/2007
+	* initrd support
+	* cmdline support
+
+Daniel Ribeiro <wyrm@people.openezx.org>
+
 0.1
 	* Initial release.
 	* Support for the following phones:
@@ -7,9 +13,3 @@
 	  * A1200 (Not sure, please test and report)
 
 Stefan Schmidt <stefan@datenfreihafen.org>
-
-0.2 - 13/09/2007
-	* initrd support
-	* cmdline support
-
-Daniel Ribeiro <wyrm@people.openezx.org>
