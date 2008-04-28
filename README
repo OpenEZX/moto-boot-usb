@@ -8,13 +8,21 @@ It allows you to test a kernel zImage without flashing it into your phone. You
 need to enter the bootloader mode of the EZX phone before the program can
 communicate with the phone:
 
+EZX first generation: (Blue bootloder screen will come up)
 A780:		press camera and jogdial(scrollwheel) button while power on.
 E680(i):	press camera and volume down button while power on.
-ROKR E2:	press the camera button while power on.
-A1200:		press voicedial button while power on.
 
-A780/E680 presents a blue screen with white text on it and ROKR E2/A1200
-presents red screen with black text on it in bootloader mode.
+EZX second generation: (Red bootloader screen will come up)
+ROKR E2:	press the voicedial button while power on.
+A1200:		press voicedial button while power on.
+ROKR E6:	press the camera button while power on.
+A910:		press the voicedial button while power on.
+
+MOTOMAGX: (Black bootloader screen will come up)
+RAZR2 V8:	press '*' and '#' buttons while power on.
+
+For the MOTOMAGX phone we are able to transfer a kernel put not able to execute
+it as it fails a signature check.
 
 If your EZX phone is not listed here you have perhaps more luck on our wiki:
 
