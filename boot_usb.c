@@ -5,7 +5,7 @@
  * Copyright (C) 2007  Daniel Ribeiro <drwyrm@gmail.com>
  *
  *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License version 2 
+ *  it under the terms of the GNU General Public License version 2
  *  as published by the Free Software Foundation
  *
  *  This program is distributed in the hope that it will be useful,
@@ -18,8 +18,8 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  * CONTRIBUTORS:
- *  	Wang YongLai <dotmonkey@gmail.com>
- *  			ROKR E2 support
+ *	Wang YongLai <dotmonkey@gmail.com>
+ *			ROKR E2 support
  *
  */
 
@@ -195,7 +195,7 @@ static int ezx_blob_send_command(char *command, char *payload, int len)
 
 	/* this usleep is required in order to make the process work.
 	 * apparently some race condition in the bootloader if we feed
-	 * data too fast 
+	 * data too fast
 	 */
 	 usleep(5000);
 
@@ -279,8 +279,8 @@ static int ezx_blob_load_program(u_int16_t phone_id, u_int32_t addr, char *data,
 	if(!addr) /* workaround for missing values */
 		return -1;
 
-	for (cur_addr = addr, cur_data = data; 
-	     cur_addr < addr+size; 
+	for (cur_addr = addr, cur_data = data;
+	     cur_addr < addr+size;
 	     cur_addr += CHUNK_SIZE, cur_data += CHUNK_SIZE) {
 		int remain;
 		if (phone_id == 0x6023) /* A1200 */
@@ -366,7 +366,7 @@ int main(int argc, char *argv[])
 //#endif
 	if (argc >=3)
 		mach_id = atoi(argv[2]);
-	
+
 	if (phone.code_size > 0) {
 		info("Sending mach id code %d:     ", mach_id);
 		if ((asm_code = malloc(CHUNK_SIZE)) == NULL) {
@@ -376,7 +376,7 @@ int main(int argc, char *argv[])
 		memset(asm_code, 0, sizeof(asm_code));
 		memcpy(asm_code, phone.code, phone.code_size);
 		*(u_int32_t *)(asm_code+phone.code_size) = mach_id;
-	
+
 		if (ezx_blob_load_program(phone.product_id, phone.kernel_addr, asm_code, CHUNK_SIZE) < 0) {
 			error("asm code send failed");
 			goto poweroff;
@@ -418,16 +418,16 @@ int main(int argc, char *argv[])
 	tag->u.core.flags = 0;
 	tag->u.core.pagesize = 0;
 	tag->u.core.rootdev = 0;
-	
+
 	tag = tag_next(tag);
 	tag->hdr.tag = ATAG_CMDLINE;
 	tag->hdr.size = ((sizeof(struct tag_header) +
 				strlen(argv[3]) + 5) >> 2);
 	strncpy(tag->u.cmdline.cmdline, argv[3], COMMAND_LINE_SIZE);
-	
+
 	if (argc < 5)
 		goto send_params;
-	
+
 	/* Send initrd */
 	fd = open(argv[4], O_RDONLY);
 	if (fd < 0 || fstat(fd, &st) < 0) {

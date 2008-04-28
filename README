@@ -1,5 +1,5 @@
 boot_usb was designed to communicate with the bootloader of EZX phones. It is
-part of the OpenEZX project (http://www.openezx.org/) and only usefull for
+part of the OpenEZX project (http://www.openezx.org/) and only useful for
 Motorola EZX linux phones.
 
 This program allows you to download an execute code on the phone ram.
@@ -9,9 +9,9 @@ need to enter the bootloader mode of the EZX phone before the program can
 communicate with the phone:
 
 A780:		press camera and jogdial(scrollwheel) button while power on.
-E680(i): 	press camera and volume down button while power on.
-ROKR E2: 	press the camera button while power on.
-A1200: 		press voicedial button while power on.
+E680(i):	press camera and volume down button while power on.
+ROKR E2:	press the camera button while power on.
+A1200:		press voicedial button while power on.
 
 A780/E680 presents a blue screen with white text on it and ROKR E2/A1200
 presents red screen with black text on it in bootloader mode.
