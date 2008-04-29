@@ -95,6 +95,12 @@ struct phonetype {
 	int code_size;
 };
 
+/* 
+ * ldr     r1, [pc, #8]
+ * sub     r0, pc, #12
+ * add     r0, r0, #4096
+ * mov     pc, r0
+ */
 #define pxa_code "\x08\x10\x9F\xE5\x0C\x00\x4F\xE2\x01\x0A\x80\xE2\x00\xF0\xA0\xE1"
 #define pxa_code_s 16
 
