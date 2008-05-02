@@ -1,7 +1,7 @@
 /* ezx_boot_usb - Ram Loader for Motorola EZX phones
  *
  * (C) 2006 by Harald Welte <laforge@gnumonks.org>
- * (C) 2006 by Stefan Schmidt <stefan@datenfreihafen.org>
+ * (C) 2006, 2008 by Stefan Schmidt <stefan@datenfreihafen.org>
  * Copyright (C) 2007  Daniel Ribeiro <drwyrm@gmail.com>
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -20,19 +20,6 @@
  * CONTRIBUTORS:
  *	Wang YongLai <dotmonkey@gmail.com>
  *			ROKR E2 support
- *
- */
-
-/*
- * This program allows you to download executable code from the PC to the phone
- * RAM.  After downloading it, the code can be executed.
- *
- * In order to make this work, the phone must be running in the bootloader,
- * rather than the regular OS.  To achieve this, push both the jogdial button
- * and the photo button while pressing power-on (A780).
- *
- * A complete list how to enter the bootloader can be found here:
- * http://wiki.openezx.org/Bootloader
  *
  */
 
@@ -95,7 +82,7 @@ struct phonetype {
 	int code_size;
 };
 
-/* 
+/*
  * ldr     r1, [pc, #8]
  * sub     r0, pc, #12
  * add     r0, r0, #4096
@@ -108,10 +95,11 @@ struct phonetype {
 struct phonetype phonetypes[] = {
 { "A780/E680",        0x6003, 0x02, 0x81, 0xa0200000, 0xa0400000, 0xa0000100, pxa_code, pxa_code_s },
 { "A780/E680 Blob2",  0x6021, 0x02, 0x81, 0xa0300000, 0xa0500000, 0xa0000100, pxa_code, pxa_code_s },
-{ "E2/A1200/E6/A910", 0x6023, 0x01, 0x82, 0xa0de0000, /*FIXME*/0, 0xa0f60000, pxa_code, pxa_code_s }, /* this params_addr doesnt work */
-{ "RAZR2 V8",         0x6403, 0x01, 0x82, 0xa0de0000, /*FIXME*/0, /*FIXME*/0, NULL, 0 }, /* XXX Address is just copied from E2/A1200 and not known to work */
-
-{ "Unknown",          0x0000, 0x00, 0x00, 0x00000000, 0x00000000, 0x00000000, NULL, 	0 }
+/* The params_addr does not work for second generation phones */
+{ "E2/A1200/E6/A910", 0x6023, 0x01, 0x82, 0xa0de0000, /*FIXME*/0, 0xa0f60000, pxa_code, pxa_code_s },
+/* FIXME Address is just copied from E2/A1200 and not known to work */
+{ "RAZR2 V8",         0x6403, 0x01, 0x82, 0xa0de0000, /*FIXME*/0, /*FIXME*/0, NULL, 0 },
+{ "Unknown",          0x0000, 0x00, 0x00, 0x00000000, 0x00000000, 0x00000000, NULL,	0 }
 };
 
 #define NUL	0x00
@@ -255,7 +243,6 @@ static int ezx_blob_cmd_jump(u_int32_t addr)
 static int ezx_blob_cmd_bin(char *data, u_int16_t size)
 {
 	char buf[8192+2+1];
-//	u_int8_t csum;
 	int rem = size % 8;
 
 /* FIXME: Any difference between (8 - rem) and rem here? */
