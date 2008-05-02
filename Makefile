@@ -1,4 +1,4 @@
-INC ?= /home/wyrm/openezx/linux-2.6.21/include
+INC ?= /usr/src/linux/include/
 
 LDFLAGS=-lusb
 CFLAGS=-Wall -I$(INC)
