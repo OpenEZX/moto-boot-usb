@@ -1,3 +1,6 @@
+INTRODUCTION:
+-------------
+
 boot_usb was designed to communicate with the bootloader of EZX phones. It is
 part of the OpenEZX project (http://www.openezx.org/) and only useful for
 Motorola EZX linux phones.
@@ -8,7 +11,7 @@ It allows you to test a kernel zImage without flashing it into your phone. You
 need to enter the bootloader mode of the EZX phone before the program can
 communicate with the phone:
 
-EZX first generation: (Blue bootloder screen will come up)
+EZX first generation: (Blue bootloader screen will come up)
 A780:		press camera and jogdial(scrollwheel) button while power on.
 E680(i):	press camera and volume down button while power on.
 
@@ -21,18 +24,31 @@ A910:		press the voicedial button while power on.
 MOTOMAGX: (Black bootloader screen will come up)
 RAZR2 V8:	press '*' and '#' buttons while power on.
 
-For the MOTOMAGX phone we are able to transfer a kernel put not able to execute
-it as it fails a signature check.
-
 If your EZX phone is not listed here you have perhaps more luck on our wiki:
 
 http://wiki.openezx.org/Bootloader
 
-COMPILING
----------
+
+COMPILING:
+----------
 
 You need to have the libusb-devel package installed. We recommend version >=
 0.1.12
 
 You need to specify the kernel include folder when compiling.
-make INC=/home/user/openezx/linux-2.6.21/include
+make INC=/path/to/your/linux/include
+
+
+USAGE:
+------
+
+boot_usb <kernel> [machid] [cmdline] [initrd]
+
+
+KNOWN SHORTCOMINGS:
+--------------------
+
+o For the MOTOMAGX phones we are able to transfer a kernel but not able to
+  execute it as it fails a signature check.
+o The second generation phones we are not able to set the commandline for the
+  kernel boot
