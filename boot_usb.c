@@ -286,7 +286,7 @@ static int ezx_blob_load_program(u_int16_t phone_id, u_int32_t addr, char *data,
 			break;
 		if ((err = ezx_blob_cmd_bin(cur_data, remain)) < 0)
 			break;
-		info("\b\b\b%02d%%",((100*(cur_data-data))/size));
+		info("\b\b\b%02d%%",(int)((100*(cur_data-data))/size));
 	}
 	if (err < 0) return err;
 	info("\b\b\b\b100%% OK\n");
