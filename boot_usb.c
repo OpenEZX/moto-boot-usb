@@ -82,7 +82,9 @@ struct phonetype {
 	int code_size;
 };
 
-/*
+/* We set set the machine ID from boot_usb with this assembler tricks beacuse
+ * the original blob is not able to do this for us.
+ *
  * ldr     r1, [pc, #8]
  * sub     r0, pc, #12
  * add     r0, r0, #4096
@@ -275,7 +277,7 @@ static int ezx_blob_load_program(u_int16_t phone_id, u_int32_t addr, char *data,
 	     cur_addr < addr+size;
 	     cur_addr += CHUNK_SIZE, cur_data += CHUNK_SIZE) {
 		int remain;
-		if (phone_id == 0x6023) /* A1200 */
+		if (phone_id == 0x6023) /* A1200 needs a fixed chunk size*/
 			remain = 4096;
 		else
 			remain = (data + size) - cur_data;
