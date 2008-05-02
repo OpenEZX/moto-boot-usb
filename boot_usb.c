@@ -245,10 +245,9 @@ static int ezx_blob_cmd_bin(char *data, u_int16_t size)
 	char buf[8192+2+1];
 	int rem = size % 8;
 
-/* FIXME: Any difference between (8 - rem) and rem here? */
-	if (rem)
-		size += (8 - rem);
-//		size += rem;
+	if (rem) {
+		size += rem;
+	}
 
 	if (size > 8192)
 		return -1;
