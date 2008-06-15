@@ -96,6 +96,7 @@ struct phonetype {
 #define EZX_VENDOR_ID 0x22b8
 struct phonetype phonetypes[] = {
 { "A780/E680",        0x6003, 0x02, 0x81, 0xa0200000, 0xa0400000, 0xa0000100, pxa_code, pxa_code_s },
+{ "Generic Blob",    0xbeef, 0x02, 0x81, 0xa0300000, 0xa0500000, 0xa0000100, NULL, 0, },
 { "A780/E680 Blob2",  0x6021, 0x02, 0x81, 0xa0300000, 0xa0500000, 0xa0000100, pxa_code, pxa_code_s },
 /* The params_addr does not work for second generation phones */
 { "E2/A1200/E6/A910", 0x6023, 0x01, 0x82, 0xa0de0000, /*FIXME*/0, 0xa0f60000, pxa_code, pxa_code_s },
@@ -361,7 +362,7 @@ int main(int argc, char *argv[])
 	if (argc >=3)
 		mach_id = atoi(argv[2]);
 
-	if (phone.code_size > 0) {
+	if (phone.code_size > 0 && mach_id > 0) {
 		info("Sending mach id code %d:     ", mach_id);
 		if ((asm_code = malloc(CHUNK_SIZE)) == NULL) {
 			error("failed to alloc memory");
