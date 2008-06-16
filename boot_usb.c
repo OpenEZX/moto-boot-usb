@@ -96,11 +96,9 @@ struct phonetype {
 #define EZX_VENDOR_ID 0x22b8
 struct phonetype phonetypes[] = {
 { "A780/E680",        0x6003, 0x02, 0x81, 0xa0200000, 0xa0400000, 0xa0000100, pxa_code, pxa_code_s },
-{ "Generic Blob",    0xbeef, 0x02, 0x81, 0xa0300000, 0xa0500000, 0xa0000100, NULL, 0, },
-{ "A780/E680 Blob2",  0x6021, 0x02, 0x81, 0xa0300000, 0xa0500000, 0xa0000100, pxa_code, pxa_code_s },
-/* The params_addr does not work for second generation phones */
-{ "E2/A1200/E6/A910", 0x6023, 0x01, 0x82, 0xa0de0000, /*FIXME*/0, 0xa0f60000, pxa_code, pxa_code_s },
-/* FIXME Address is just copied from E2/A1200 and not known to work */
+{ "Generic Blob",     0xbeef, 0x02, 0x81, 0xa0200000, 0xa0400000, 0xa0000100, pxa_code, pxa_code_s }, /* pxa_code is temporary here */
+{ "A780/E680 Blob2",  0x6021, 0x02, 0x81, 0xa0300000, 0xa0400000, 0xa0000100, pxa_code, pxa_code_s },
+{ "E2/A1200/E6/A910", 0x6023, 0x01, 0x82, 0xa0de0000, /*FIXME*/0, /*FIXME*/0, pxa_code, pxa_code_s },
 { "RAZR2 V8",         0x6403, 0x01, 0x82, 0xa0de0000, /*FIXME*/0, /*FIXME*/0, NULL, 0 },
 { "Unknown",          0x0000, 0x00, 0x00, 0x00000000, 0x00000000, 0x00000000, NULL,	0 }
 };
