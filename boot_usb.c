@@ -282,7 +282,8 @@ static int ezx_blob_load_program(u_int16_t phone_id, u_int32_t addr, char *data,
 			remain = (data + size) - cur_data;
 		if (remain > CHUNK_SIZE)
 			remain = CHUNK_SIZE;
-
+		else if (remain % 8)
+			remain = (remain / 8) * 8 + 8;
 		if ((err = ezx_blob_cmd_addr(cur_addr)) < 0)
 			break;
 		if ((err = ezx_blob_cmd_bin(cur_data, remain)) < 0)
