@@ -246,8 +246,9 @@ static int ezx_blob_cmd_bin(char *data, u_int16_t size)
 	char buf[8192+2+1];
 	int rem = size % 8;
 
+	/* Assert that data is multiple of 8 */
 	if (rem) {
-		size += rem;
+		size += 8 - rem;
 	}
 
 	if (size > 8192)
