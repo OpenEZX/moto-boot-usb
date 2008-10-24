@@ -37,7 +37,7 @@
 #include <arpa/inet.h>
 #include <usb.h>
 
-#include <asm-arm/setup.h> /* for boot_params */
+#include "arm-setup.h" /* for boot_params */
 
 //#define DEBUG
 

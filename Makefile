@@ -1,4 +1,4 @@
-INC ?= /usr/src/linux/include/
+INC ?= /home/stefan/Projekte/OpenEZX/kernel-tree/openezx/include
 
 LDFLAGS=-lusb
 CFLAGS=-Wall -I$(INC)
