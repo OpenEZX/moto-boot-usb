@@ -1,7 +1,7 @@
-INC ?= /usr/src/linux/include
+KSRC ?= /usr/src/linux/
 
 LDFLAGS=-lusb
-CFLAGS=-Wall -I$(INC)
+CFLAGS=-Wall -I$(KSRC)/include -I$(KSRC)/arch/arm/include 
 
 all: boot_usb
 

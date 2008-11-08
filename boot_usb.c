@@ -37,7 +37,7 @@
 #include <arpa/inet.h>
 #include <usb.h>
 
-#include "arm-setup.h" /* for boot_params */
+#include <asm/setup.h> /* for boot_params */
 
 //#define DEBUG
 
@@ -394,9 +394,10 @@ int main(int argc, char *argv[])
 	/* send boot_params */
 	if (argc >= 5)		/* with initrd - 4 tags */
 		tagsize = sizeof(struct tag_header) * 4 +
-					sizeof(struct tag_initrd);
+			sizeof(struct tag_core) + sizeof(struct tag_initrd);
 	else			/* cmdline only - 3 tags */
-		tagsize = sizeof(struct tag_header) * 3;
+		tagsize = sizeof(struct tag_header) * 3 +
+						sizeof(struct tag_core);
 	/* cmdline string */
 	tagsize += (strlen(argv[3]) > COMMAND_LINE_SIZE ? COMMAND_LINE_SIZE :
 		strlen(argv[3])) + 5;
