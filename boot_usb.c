@@ -388,23 +388,24 @@ int main(int argc, char *argv[])
 	close(fd);
 	prog = NULL;
 
-	if (argc < 4)
-		goto run_kernel;
-
 	/* send boot_params */
-	if (argc >= 5)		/* with initrd - 6 tags */
-		tagsize = (sizeof(struct tag_header) * 6) +
-				sizeof(struct tag_core) +
-				(sizeof(struct tag_mem32) * 2) +
-				sizeof(struct tag_initrd);
-	else			/* cmdline only - 5 tags */
-		tagsize = (sizeof(struct tag_header) * 5) +
-				sizeof(struct tag_core) +
-				(sizeof(struct tag_mem32) * 2);
 
-	/* cmdline string */
-	tagsize += (strlen(argv[3]) > COMMAND_LINE_SIZE ? COMMAND_LINE_SIZE :
-		strlen(argv[3])) + 5;
+	/* we will always send at least 4 tags (core + (2 * mem) + none) */
+	tagsize = (sizeof(struct tag_header) * 4) + sizeof(struct tag_core) +
+			(sizeof(struct tag_mem32) * 2);
+
+	switch (argc) {
+	case 5:			/* with initrd - 6 tags */
+		tagsize += sizeof(struct tag_header) +
+			sizeof(struct tag_initrd);
+	case 4:			/* with cmdline - 5+ tags */
+		tagsize += sizeof(struct tag_header) +
+			((strlen(argv[3]) + 5) > COMMAND_LINE_SIZE ?
+			COMMAND_LINE_SIZE : strlen(argv[3]) + 5);
+	default:
+		break;
+
+	}
 
 	if (!(tag = malloc(tagsize))) {
 		error("cannot alloc %d bytes for params", tagsize);
@@ -429,6 +430,9 @@ int main(int argc, char *argv[])
 	tag->hdr.size = tag_size(tag_mem32);
 	tag->u.mem.start = 0xac000000;
 	tag->u.mem.size = 16 * 1024 * 1024;
+
+	if (argc < 4)
+		goto send_params;
 
 	tag = tag_next(tag);
 	tag->hdr.tag = ATAG_CMDLINE;
@@ -473,7 +477,6 @@ send_params:
 		error("params upload failed");
 		goto poweroff;
 	}
-run_kernel:
 	info("Calling the kernel...\n");
 	if (ezx_blob_cmd_jump(phone.kernel_addr) < 0) {
 		error("kernel jump failed");
