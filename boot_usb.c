@@ -392,12 +392,16 @@ int main(int argc, char *argv[])
 		goto run_kernel;
 
 	/* send boot_params */
-	if (argc >= 5)		/* with initrd - 4 tags */
-		tagsize = sizeof(struct tag_header) * 4 +
-			sizeof(struct tag_core) + sizeof(struct tag_initrd);
-	else			/* cmdline only - 3 tags */
-		tagsize = sizeof(struct tag_header) * 3 +
-						sizeof(struct tag_core);
+	if (argc >= 5)		/* with initrd - 6 tags */
+		tagsize = (sizeof(struct tag_header) * 6) +
+				sizeof(struct tag_core) +
+				(sizeof(struct tag_mem32) * 2) +
+				sizeof(struct tag_initrd);
+	else			/* cmdline only - 5 tags */
+		tagsize = (sizeof(struct tag_header) * 5) +
+				sizeof(struct tag_core) +
+				(sizeof(struct tag_mem32) * 2);
+
 	/* cmdline string */
 	tagsize += (strlen(argv[3]) > COMMAND_LINE_SIZE ? COMMAND_LINE_SIZE :
 		strlen(argv[3])) + 5;
@@ -413,6 +417,18 @@ int main(int argc, char *argv[])
 	tag->u.core.flags = 0;
 	tag->u.core.pagesize = 0;
 	tag->u.core.rootdev = 0;
+
+	tag = tag_next(tag);
+	tag->hdr.tag = ATAG_MEM;
+	tag->hdr.size = tag_size(tag_mem32);
+	tag->u.mem.start = 0xa0000000;
+	tag->u.mem.size = 32 * 1024 * 1024;
+
+	tag = tag_next(tag);
+	tag->hdr.tag = ATAG_MEM;
+	tag->hdr.size = tag_size(tag_mem32);
+	tag->u.mem.start = 0xac000000;
+	tag->u.mem.size = 16 * 1024 * 1024;
 
 	tag = tag_next(tag);
 	tag->hdr.tag = ATAG_CMDLINE;
