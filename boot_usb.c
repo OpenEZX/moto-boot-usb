@@ -388,6 +388,11 @@ int main(int argc, char *argv[])
 	close(fd);
 	prog = NULL;
 
+	if (!phone.params_addr) {
+		info("Warning, params is not supported on your phone, please consider using gen-blob\n");
+		goto run_kernel;
+	}
+
 	/* send boot_params */
 
 	/* we will always send at least 4 tags (core + (2 * mem) + none) */
@@ -477,6 +482,7 @@ send_params:
 		error("params upload failed");
 		goto poweroff;
 	}
+run_kernel:
 	info("Calling the kernel...\n");
 	if (ezx_blob_cmd_jump(phone.kernel_addr) < 0) {
 		error("kernel jump failed");
