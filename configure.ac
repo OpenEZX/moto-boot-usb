@@ -24,7 +24,7 @@ AC_CHECK_LIB([usb], [usb_init],,,-lusb)
 AC_HEADER_STDC
 AC_CHECK_HEADERS([stdio.h stdlib.h unistd.h string.h getopt.h errno.h])
 AC_CHECK_HEADERS([sys/types.h sys/stat.h sys/mman.h fcntl.h arpa/inet.h usb.h])
-AC_CHECK_HEADERS([${KERNEL_DIR}/include/asm-arm/setup.h],
+AC_CHECK_HEADERS([asm/setup.h],
 		 [ ],
 		 [AC_MSG_ERROR([Could not find kernel headers, use --with-kernel-dir=DIR option])])
 
