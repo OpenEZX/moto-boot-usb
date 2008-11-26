@@ -311,6 +311,22 @@ int main(int argc, char *argv[])
 	int k_offset = 0;
 	int mach_id = 867; /* 867 is the old EZX mach id */
 
+	if (argc < 2) {
+		info("usage: %s <kernel> [machid] [cmdline] [initrd]\n\n", argv[0]);
+		info("machid table:\n"
+		     "\t   0\tgen-blob\n"
+		     "\t 867\told EZX mach id (default)\n"
+		     "\t1740\tA780\n"
+		     "\t1741\tE680\n"
+		     "\t1742\tA1200\n"
+		     "\t1743\tE6\n"
+		     "\t1744\tE2\n"
+		     "\t1745\tA910\n\n");
+
+		error("Too few arguments.");
+		goto exit;
+	}
+
 	usb_init();
 	if (!usb_find_busses())
 		exit(1);
@@ -320,10 +336,6 @@ int main(int argc, char *argv[])
 	dev = find_ezx_device();
 	if (!dev) {
 		error("cannot find known EZX device in bootloader mode");
-		goto exit;
-	}
-	if (argc < 2) {
-		error("usage: %s <kernel> [machid] [cmdline] [initrd]", argv[0]);
 		goto exit;
 	}
 	if (!(hdl = usb_open(dev))) {
@@ -358,7 +370,7 @@ int main(int argc, char *argv[])
 		goto poweroff;
 	}
 //#endif
-	if (argc >=3)
+	if (argc >= 3)
 		mach_id = atoi(argv[2]);
 
 	if (phone.code_size > 0 && mach_id > 0) {
