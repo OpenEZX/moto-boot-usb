@@ -27,7 +27,7 @@ AC_CHECK_HEADERS([sys/types.h sys/stat.h sys/mman.h fcntl.h arpa/inet.h usb.h])
 
 # We need the setup.h for the 'arm' architecture
 AC_MSG_CHECKING([for asm/setup.h])
-CPPFLAGS="-I$KERNEL_DIR/arch/arm/include"
+CPPFLAGS="-I$KERNEL_DIR/arch/arm/include -I$KERNEL_DIR/include"
 # Grepping for tag_mem32 should be safe, only 'arm' defines it
 AC_EGREP_HEADER(tag_mem32, asm/setup.h,
 	[AC_MSG_RESULT(yes)],
