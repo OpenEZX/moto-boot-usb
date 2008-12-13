@@ -1,3 +1,10 @@
+0.3 - 2008-12-13
+	* Move to autotools (Adrian-Ken Rueegsegger, Antonio Ospite)
+	* Implement ATAG_MEM (Daniel Ribeiro)
+	* More usage information (Antonio Ospite)
+
+Stefan Schmidt <stefan@datenfreihafen.org>
+
 0.2 - 2008-05-03
 	* Initrd support (Daniel Ribeiro)
 	* Cmdline support (Daniel Ribeiro)

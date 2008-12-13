@@ -1,5 +1,5 @@
 AC_PREREQ(2.60)
-AC_INIT([boot_usb], [0.2], [openezx-devel@lists.openezx.org])
+AC_INIT([boot_usb], [0.3], [openezx-devel@lists.openezx.org])
 AC_CONFIG_SRCDIR([boot_usb.c])
 AC_CONFIG_HEADER([config.h])
 AM_INIT_AUTOMAKE([-Wall foreign])
