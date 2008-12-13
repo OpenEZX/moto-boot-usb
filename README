@@ -35,8 +35,13 @@ COMPILING:
 You need to have the libusb-devel package installed. We recommend version >=
 0.1.12
 
-You need to specify the kernel include folder when compiling.
-make INC=/path/to/your/linux/include
+You need to specify the kernel include folder when configuring and not having it
+at the standard place /usr/src/linux/
+
+./configure --with-kernel-dir=$DIR
+
+Staring from version 0.3 you also need either a recent kernel, 2.6.28-rcX, or
+point to a kernel tree configured for ARM.
 
 
 USAGE:
