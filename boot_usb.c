@@ -140,7 +140,7 @@ static struct usb_device *find_ezx_device(void)
 	return NULL;
 }
 
-static int ezx_blob_recv_reply(void)
+static int ezx_blob_recv_reply(char *b)
 {
 	char buf[8192];
 	int ret, i;
@@ -149,17 +149,16 @@ static int ezx_blob_recv_reply(void)
 
 	ret = usb_bulk_read(hdl, phone.in_ep, buf, sizeof(buf), 0);
 
-	for (i = 0; i < ret; i++)
-		if (buf[i] == 0x03)
-			buf[i] = 0x00;
-
 	dbg("RX: %s (%s)", buf, hexdump(buf, ret));
+
+	if (b)
+		memcpy(b, buf, 8192);
 
 	return ret;
 }
 
 
-static int ezx_blob_send_command(char *command, char *payload, int len)
+static int ezx_blob_send_command(char *command, char *payload, int len, char *reply)
 {
 	char buf[8192];
 	int cmdlen = strlen(command);
@@ -194,7 +193,7 @@ static int ezx_blob_send_command(char *command, char *payload, int len)
 	 */
 	 usleep(5000);
 
-	return ezx_blob_recv_reply();
+	return ezx_blob_recv_reply(reply);
 }
 
 /* the most secure checksum I've ever seen ;) */
@@ -215,14 +214,14 @@ static int ezx_blob_cmd_addr(u_int32_t addr)
 	u_int8_t csum;
 	int len;
 
-	len = snprintf(buf, sizeof(buf), "%8X", addr);
+	len = snprintf(buf, sizeof(buf), "%08X", addr);
 	csum = ezx_csum(buf, 8);
-	len += snprintf(buf+8, sizeof(buf)-len, "%2X", csum);
+	len += snprintf(buf+8, sizeof(buf)-len, "%02X", csum);
 
 	if (len != 10)
 		return -1;
 
-	return ezx_blob_send_command("ADDR", buf, len);
+	return ezx_blob_send_command("ADDR", buf, len, NULL);
 }
 
 static int ezx_blob_cmd_jump(u_int32_t addr)
@@ -231,14 +230,48 @@ static int ezx_blob_cmd_jump(u_int32_t addr)
 	u_int8_t csum;
 	int len;
 
-	len = snprintf(buf, sizeof(buf), "%8X", addr);
+	len = snprintf(buf, sizeof(buf), "%08X", addr);
 	csum = ezx_csum(buf, 8);
-	len += snprintf(buf+8, sizeof(buf)-len, "%2X", csum);
+	len += snprintf(buf+8, sizeof(buf)-len, "%02X", csum);
 
 	if (len != 10)
 		return -1;
 
-	return ezx_blob_send_command("JUMP", buf, len);
+	return ezx_blob_send_command("JUMP", buf, len, NULL);
+}
+
+static int ezx_blob_cmd_rbin(u_int32_t addr, u_int16_t size, u_int8_t *response)
+{
+	char buf[128];
+	char reply[8192];
+	u_int8_t *data;
+	u_int8_t csum;
+	int len, i;
+	int err;
+
+	len = snprintf(buf, sizeof(buf), "%08X%04X", addr, size);
+	csum = ezx_csum(buf, 12);
+	len += snprintf(buf+12, sizeof(buf)-len, "%02X", csum);
+
+	if (len != 14)
+		return -1;
+
+	err = ezx_blob_send_command("RBIN", buf, len, reply);
+
+	if (err < 0)
+		return err;
+
+	csum = 0;
+	data = reply + 6;
+	for (i = 0; i < size; i++) {
+		response[i] = data[i];
+		csum += data[i];
+	}
+
+	if (csum != data[i])
+		return -1;
+
+	return 0;
 }
 
 static int ezx_blob_cmd_bin(char *data, u_int16_t size)
@@ -260,10 +293,31 @@ static int ezx_blob_cmd_bin(char *data, u_int16_t size)
 	memcpy(buf+2, data, size);
 	buf[size+2] = ezx_csum(data, size);
 
-	return ezx_blob_send_command("BIN", buf, size+3);
+	return ezx_blob_send_command("BIN", buf, size+3, NULL);
 }
 
 #define CHUNK_SIZE 4096
+static int ezx_blob_dload_program(u_int32_t addr, char *data, int size)
+{
+	u_int32_t cur_addr;
+	char *cur_data;
+	int err;
+	for (cur_addr = addr, cur_data = data;
+	     cur_addr < addr+size;
+	     cur_addr += CHUNK_SIZE, cur_data += CHUNK_SIZE) {
+		int remain = (data + size) - cur_data;
+		if (remain > CHUNK_SIZE)
+			remain = CHUNK_SIZE;
+		if ((err = ezx_blob_cmd_rbin(cur_addr, remain, cur_data)) < 0)
+			break;
+
+		info("\b\b\b%02d%%",(int)((100*(cur_data-data))/size));
+	}
+	if (err < 0) return err;
+	info("\b\b\b\b100%% OK\n");
+	return 0;
+}
+
 static int ezx_blob_load_program(u_int16_t phone_id, u_int32_t addr, char *data, int size)
 {
 	u_int32_t cur_addr;
@@ -312,9 +366,13 @@ int main(int argc, char *argv[])
 	int mach_id = 867; /* 867 is the old EZX mach id */
 
 	if (argc < 2) {
-		info("usage: %s <kernel> [machid] [cmdline] [initrd]\n\n", argv[0]);
-		info("machid table:\n"
-		     "\t   0\tgen-blob\n"
+		info("usage: %s <kernel> [machid] [cmdline] [initrd]\n", argv[0]);
+		info("usage: %s read <addr> <size> <file>\n", argv[0]);
+		info("usage: %s write <addr> <file>\n", argv[0]);
+		info("usage: %s jump <addr>\n");
+
+		info("\nmachid table:\n"
+		     "\t   0\tDont set mach id\n"
 		     "\t 867\told EZX mach id (default)\n"
 		     "\t1740\tA780\n"
 		     "\t1741\tE680\n"
@@ -346,6 +404,63 @@ int main(int argc, char *argv[])
 		error("claim usb interface 1 of device: %s", usb_strerror());
 		goto exit;
 	}
+
+//#ifdef DEBUG /* query information only if debugging */
+	if (ezx_blob_send_command("RQSN", NULL, 0, NULL) < 0) {
+		error("RQSN");
+		goto poweroff;
+	}
+	if (ezx_blob_send_command("RQVN", NULL, 0, NULL) < 0) {
+		error("RQVN");
+		goto poweroff;
+	}
+//#endif
+	if (phone.product_id == 0xbeef) {
+		if (!strcmp(argv[1], "read")) {
+			u_int32_t addr;
+			u_int32_t size;
+			char *d;
+
+			if (argc != 5) {
+				printf("usage: %s read <addr> <size> <file>\n",
+					argv[0]);
+				exit(1);
+			}
+
+			fd = open(argv[4], O_CREAT | O_WRONLY);
+		        if (fd < 0 || fstat(fd, &st) < 0) {
+	        	        error("%s: %s", argv[4], strerror(errno));
+		                goto poweroff;
+			}
+
+			size = atoi(argv[3]);
+			addr = atoi(argv[2]);
+			if (size < 8 || size % 8 || addr < 0 || addr % 8) {
+				error("invalid parameter %d %d", addr, size);
+				goto poweroff;
+			}
+			info("Downloading:     ");
+			if((prog = malloc(size)) == NULL) {
+				error("failed to alloc memory");
+				goto poweroff;
+			}
+			if (ezx_blob_dload_program(addr, prog, size)) {
+				error("download failed\n");
+				goto poweroff;
+			}
+			write(fd, prog, size);
+			close(fd);
+			free(prog);
+			exit(0);
+		} else if (!strcasecmp(argv[1], "write")) {
+			printf("fixme\n");
+			exit(0);
+		} else if (!strcasecmp(argv[1], "jump")) {
+			printf("fixme\n");
+			exit(0);
+		}
+	}
+
 	if ((fd = open(argv[1], O_RDONLY)) < 0) {
 		error("%s: %s", argv[1], strerror(errno));
 		goto poweroff;
@@ -360,16 +475,21 @@ int main(int argc, char *argv[])
 		goto poweroff;
 	}
 
-//#ifdef DEBUG /* query information only if debugging */
-	if (ezx_blob_send_command("RQSN", NULL, 0) < 0) {
-		error("RQSN");
+	if ((fd = open(argv[1], O_RDONLY)) < 0) {
+		error("%s: %s", argv[1], strerror(errno));
 		goto poweroff;
 	}
-	if (ezx_blob_send_command("RQVN", NULL, 0) < 0) {
-		error("RQVN");
+	if (fstat(fd, &st) < 0) {
+		error("%s: %s", argv[1], strerror(errno));
 		goto poweroff;
 	}
-//#endif
+	/* mmap kernel image passed as parameter */
+	if (!(prog = mmap(NULL, st.st_size, PROT_READ, MAP_SHARED, fd, 0))) {
+		error("mmap error: %s", strerror(errno));
+		goto poweroff;
+	}
+
+
 	if (argc >= 3)
 		mach_id = atoi(argv[2]);
 
