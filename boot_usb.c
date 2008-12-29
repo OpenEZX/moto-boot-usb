@@ -149,10 +149,14 @@ static int ezx_blob_recv_reply(char *b)
 
 	ret = usb_bulk_read(hdl, phone.in_ep, buf, sizeof(buf), 0);
 
-	dbg("RX: %s (%s)", buf, hexdump(buf, ret));
+	dbg("RX: %s", hexdump(buf, ret));
 
 	if (b)
 		memcpy(b, buf, 8192);
+
+	if (!strncmp(buf, "\x02ERR", 4))
+		ret = -buf[5];
+
 
 	return ret;
 }
@@ -191,7 +195,7 @@ static int ezx_blob_send_command(char *command, char *payload, int len, char *re
 	 * apparently some race condition in the bootloader if we feed
 	 * data too fast
 	 */
-	 usleep(5000);
+//	 usleep(5000);
 
 	return ezx_blob_recv_reply(reply);
 }
@@ -277,12 +281,8 @@ static int ezx_blob_cmd_rbin(u_int32_t addr, u_int16_t size, u_int8_t *response)
 static int ezx_blob_cmd_bin(char *data, u_int16_t size)
 {
 	char buf[8192+2+1];
-	int rem = size % 8;
 
-	/* Assert that data is multiple of 8 */
-	if (rem) {
-		size += 8 - rem;
-	}
+	size += (size % 8) ? (8 - (size % 8)) : 0;
 
 	if (size > 8192)
 		return -1;
@@ -296,7 +296,7 @@ static int ezx_blob_cmd_bin(char *data, u_int16_t size)
 	return ezx_blob_send_command("BIN", buf, size+3, NULL);
 }
 
-static int ezx_blob_cmd_flash(u_int32_t source, u_int32_t dest, u_int16_t size)
+static int ezx_blob_cmd_flash(u_int32_t source, u_int32_t dest, u_int32_t size)
 {
 	char buf[128];
 	u_int8_t csum;
@@ -304,11 +304,11 @@ static int ezx_blob_cmd_flash(u_int32_t source, u_int32_t dest, u_int16_t size)
 
 	len = snprintf(buf, sizeof(buf), "%08X", source);
 	len += snprintf(buf+8, sizeof(buf)-len, "%08X", dest);
-	len += snprintf(buf+16, sizeof(buf)-len, "%04X", size);
-	csum = ezx_csum(buf, 20);
-	len += snprintf(buf+20, sizeof(buf)-len, "%02X", csum);
+	len += snprintf(buf+16, sizeof(buf)-len, "%08X", size);
+	csum = ezx_csum(buf, 24);
+	len += snprintf(buf+24, sizeof(buf)-len, "%02X", csum);
 
-	if (len != 22)
+	if (len != 26)
 		return -1;
 
 	return ezx_blob_send_command("FLASH", buf, len, NULL);
@@ -364,6 +364,36 @@ static int ezx_blob_load_program(u_int16_t phone_id, u_int32_t addr, char *data,
 	}
 	if (err < 0) return err;
 	info("\b\b\b\b100%% OK\n");
+	return 0;
+}
+
+static int ezx_blob_flash_program(u_int32_t addr, char * data, int size)
+{
+	u_int32_t cur_addr;
+	char *cur_data;
+
+	info("Will flash %d bytes of data plus %d bytes of padding\n", size,
+		(size % 0x20000) ? (size - (size % 0x20000)) : 0);
+	for (cur_addr = addr, cur_data = data;
+	     cur_addr < addr+size;
+	     cur_addr += 0x800000, cur_data += 0x800000) {
+		int remain = (data + size) - cur_data;
+
+		remain = (remain > 0x800000) ? 0x800000 : remain;
+		info("Loading %d bytes:     ", remain);
+		if (ezx_blob_load_program(0xbeef, 0xa1000000,
+						cur_data, remain) < 0)
+			return -1;
+
+		/* pad up to flash block size */
+		remain +=(remain % 0x20000)?(0x20000 - (remain % 0x20000)):0;
+
+		info("Flashing: ");
+		if (ezx_blob_cmd_flash(0xa1000000, cur_addr, remain) < 0)
+			return -1;
+		info("OK\n");
+	}
+	info("Flashing completed!\n");
 	return 0;
 }
 
@@ -450,9 +480,10 @@ int main(int argc, char *argv[])
 	        	        error("%s: %s", argv[4], strerror(errno));
 		                goto exit;
 			}
-
-			size = atoi(argv[3]);
-			addr = atoi(argv[2]);
+			if ((sscanf(argv[3], "0x%x", &size) != 1))
+				size = atoi(argv[3]);
+			if ((sscanf(argv[2], "0x%x", &addr) != 1))
+				addr = atoi(argv[2]);
 			if (size < 8 || size % 8 || addr < 0 || addr % 8) {
 				error("invalid parameter %d %d", addr, size);
 				goto exit;
@@ -470,16 +501,41 @@ int main(int argc, char *argv[])
 			close(fd);
 			free(prog);
 			exit(0);
-		} else if (!strcmp(argv[1], "flash")) {
-			printf("fixme\n");
-			ezx_blob_cmd_flash(0x12345, 0xbeef, 31337);
+		} else if (!strcmp(argv[1], "write")) {
+			char *data;
+			u_int32_t addr;
+
+			if (sscanf(argv[2], "0x%x", &addr) != 1)
+				addr = atoi(argv[2]);
+
+			if ((fd = open(argv[3], O_RDONLY)) < 0) {
+				error("%s", strerror(errno));
+				goto exit;
+			}
+			if (fstat(fd, &st) < 0) {
+				error("%s", strerror(errno));
+				goto exit;
+			}
+			if ((addr + st.st_size) > 0x4000000 || addr % 0x20000) {
+				error("invalid flash file/address");
+				goto exit;
+			}
+			if (!(data = mmap(NULL, st.st_size, PROT_READ, MAP_SHARED, fd, 0))) {
+				error("mmap error: %s", strerror(errno));
+				goto exit;
+			}
+			if (ezx_blob_flash_program(addr,data,st.st_size) < 0) {
+				error("flash failed");
+				goto exit;
+			}
 			exit(0);
 		} else if (!strcmp(argv[1], "off")) {
 			ezx_blob_send_command("POWER_DOWN", NULL, 0, NULL);
 			exit(0);
 		} else if (!strcmp(argv[1], "jump")) {
 			u_int32_t addr;
-			addr = atoi(argv[2]);
+			if (sscanf(argv[2], "0x%x", &addr) != 1)
+				addr = atoi(argv[2]);
 			if (addr < 0xa0000000 || addr > 0xa2000000 || addr %8) {
 				error("invalid addr");
 				goto exit;
@@ -505,21 +561,6 @@ int main(int argc, char *argv[])
 		error("mmap error: %s", strerror(errno));
 		goto exit;
 	}
-
-	if ((fd = open(argv[1], O_RDONLY)) < 0) {
-		error("%s: %s", argv[1], strerror(errno));
-		goto exit;
-	}
-	if (fstat(fd, &st) < 0) {
-		error("%s: %s", argv[1], strerror(errno));
-		goto exit;
-	}
-	/* mmap kernel image passed as parameter */
-	if (!(prog = mmap(NULL, st.st_size, PROT_READ, MAP_SHARED, fd, 0))) {
-		error("mmap error: %s", strerror(errno));
-		goto exit;
-	}
-
 
 	if (argc >= 3)
 		mach_id = atoi(argv[2]);
