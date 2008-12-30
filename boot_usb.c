@@ -315,7 +315,7 @@ static int ezx_blob_cmd_flash(u_int32_t source, u_int32_t dest, u_int32_t size)
 }
 
 #define CHUNK_SIZE 4096
-static int ezx_blob_dload_program(u_int32_t addr, char *data, int size)
+static int ezx_blob_dload_program(u_int32_t addr, char *data, int size, int v)
 {
 	u_int32_t cur_addr;
 	char *cur_data;
@@ -328,15 +328,15 @@ static int ezx_blob_dload_program(u_int32_t addr, char *data, int size)
 			remain = CHUNK_SIZE;
 		if ((err = ezx_blob_cmd_rbin(cur_addr, remain, cur_data)) < 0)
 			break;
-
-		info("\b\b\b%02d%%",(int)((100*(cur_data-data))/size));
+		if (v)
+			info("\b\b\b%02d%%",(int)((100*(cur_data-data))/size));
 	}
 	if (err < 0) return err;
-	info("\b\b\b\b100%% OK\n");
+	if (v) info("\b\b\b\b100%% OK\n");
 	return 0;
 }
 
-static int ezx_blob_load_program(u_int16_t phone_id, u_int32_t addr, char *data, int size)
+static int ezx_blob_load_program(u_int16_t phone_id, u_int32_t addr, char *data, int size, int v)
 {
 	u_int32_t cur_addr;
 	char *cur_data;
@@ -360,10 +360,11 @@ static int ezx_blob_load_program(u_int16_t phone_id, u_int32_t addr, char *data,
 			break;
 		if ((err = ezx_blob_cmd_bin(cur_data, remain)) < 0)
 			break;
-		info("\b\b\b%02d%%",(int)((100*(cur_data-data))/size));
+		if (v)
+			info("\b\b\b%02d%%",(int)((100*(cur_data-data))/size));
 	}
 	if (err < 0) return err;
-	info("\b\b\b\b100%% OK\n");
+	if (v) info("\b\b\b\b100%% OK\n");
 	return 0;
 }
 
@@ -386,26 +387,27 @@ static int ezx_blob_flash_program(u_int32_t addr, char *data, int size)
 		(size + pad) / MAX_FLASH_SIZE +
 		((size + pad) % MAX_FLASH_SIZE ? 1 : 0));
 
+	info("Flashing:     ");
 	for (cur_addr = addr, cur_data = data;
-	     cur_addr < addr+size;
+	     cur_addr < (addr + size);
 	     cur_addr += MAX_FLASH_SIZE, cur_data += MAX_FLASH_SIZE) {
 		int remain = (data + size) - cur_data;
 
 		remain = (remain > MAX_FLASH_SIZE) ? MAX_FLASH_SIZE : remain;
-		info("Loading %d bytes:     ", remain);
+
 		if (ezx_blob_load_program(0xbeef, FLASH_TEMP_ADDR,
-						cur_data, remain) < 0)
+						cur_data, remain, 0) < 0)
 			return -1;
 
 		/* pad up to flash block size */
 		remain += pad;
 
-		info("Flashing: ");
 		if (ezx_blob_cmd_flash(FLASH_TEMP_ADDR, cur_addr, remain) < 0)
 			return -1;
-		info("OK\n");
+
+		info("\b\b\b%02d%%",(int)((100*(cur_data-data))/size));
 	}
-	info("Flashing completed!\n");
+	info("\b\b\b\b100%% OK\n");
 	return 0;
 }
 
@@ -516,7 +518,7 @@ int main(int argc, char *argv[])
 				error("failed to alloc memory");
 				goto exit;
 			}
-			if (ezx_blob_dload_program(addr, prog, size)) {
+			if (ezx_blob_dload_program(addr, prog, size, 1)) {
 				error("download failed\n");
 				goto exit;
 			}
@@ -589,7 +591,7 @@ int main(int argc, char *argv[])
 				goto exit;
 			}
 			if (ezx_blob_load_program(0xbeef, addr, prog, 
-							st.st_size) < 0) {
+							st.st_size, 1) < 0) {
 				error("upload failed");
 				goto exit;
 			}
@@ -649,7 +651,7 @@ int main(int argc, char *argv[])
 		memcpy(asm_code, phone.code, phone.code_size);
 		*(u_int32_t *)(asm_code+phone.code_size) = mach_id;
 
-		if (ezx_blob_load_program(phone.product_id, phone.kernel_addr, asm_code, CHUNK_SIZE) < 0) {
+		if (ezx_blob_load_program(phone.product_id, phone.kernel_addr, asm_code, CHUNK_SIZE, 1) < 0) {
 			error("asm code send failed");
 			goto exit;
 		}
@@ -657,7 +659,7 @@ int main(int argc, char *argv[])
 	}
 
 	info("Uploading kernel:     ");
-	if (ezx_blob_load_program(phone.product_id, phone.kernel_addr+k_offset, prog, st.st_size) < 0) {
+	if (ezx_blob_load_program(phone.product_id, phone.kernel_addr+k_offset, prog, st.st_size, 1) < 0) {
 		error("kernel upload failed");
 		goto exit;
 	}
@@ -737,7 +739,7 @@ int main(int argc, char *argv[])
 		goto exit;
 	}
 	info("Uploading initrd:     ");
-	if (ezx_blob_load_program(phone.product_id, phone.initrd_addr, prog, st.st_size) < 0) {
+	if (ezx_blob_load_program(phone.product_id, phone.initrd_addr, prog, st.st_size, 1) < 0) {
 		error("initrd upload failed");
 		goto exit;
 	}
@@ -756,7 +758,7 @@ send_params:
 	tag->hdr.tag = ATAG_NONE;
 	tag->hdr.size = 0;
 	info ("Uploading params:     ");
-	if (ezx_blob_load_program(phone.product_id, phone.params_addr, (void *) first_tag, tagsize) < 0) {
+	if (ezx_blob_load_program(phone.product_id, phone.params_addr, (void *) first_tag, tagsize, 1) < 0) {
 		error("params upload failed");
 		goto exit;
 	}
