@@ -367,29 +367,41 @@ static int ezx_blob_load_program(u_int16_t phone_id, u_int32_t addr, char *data,
 	return 0;
 }
 
-static int ezx_blob_flash_program(u_int32_t addr, char * data, int size)
+#define FLASH_BLOCK_SIZE	0x20000 	/* 128k */
+#define MAX_FLASH_SIZE		0x200000	/* 2MB */
+#define FLASH_TEMP_ADDR		0xa0400000
+
+static int ezx_blob_flash_program(u_int32_t addr, char *data, int size)
 {
 	u_int32_t cur_addr;
 	char *cur_data;
+	int pad = (size % FLASH_BLOCK_SIZE) ?
+		(FLASH_BLOCK_SIZE - (size % FLASH_BLOCK_SIZE)) : 0;
 
-	info("Will flash %d bytes of data plus %d bytes of padding\n", size,
-		(size % 0x20000) ? (size - (size % 0x20000)) : 0);
+	info("Will flash %d bytes of data plus %d bytes of padding\n"
+	      "(%d bytes total, %d flash blocks, %d usb uploads)\n",
+		size, pad, size + pad,
+		(size + pad) / FLASH_BLOCK_SIZE +
+		(size + pad) % FLASH_BLOCK_SIZE ? 1 : 0,
+		(size + pad) / MAX_FLASH_SIZE +
+		(size + pad) % MAX_FLASH_SIZE ? 1 : 0);
+
 	for (cur_addr = addr, cur_data = data;
 	     cur_addr < addr+size;
-	     cur_addr += 0x800000, cur_data += 0x800000) {
+	     cur_addr += MAX_FLASH_SIZE, cur_data += MAX_FLASH_SIZE) {
 		int remain = (data + size) - cur_data;
 
-		remain = (remain > 0x800000) ? 0x800000 : remain;
+		remain = (remain > MAX_FLASH_SIZE) ? MAX_FLASH_SIZE : remain;
 		info("Loading %d bytes:     ", remain);
-		if (ezx_blob_load_program(0xbeef, 0xa1000000,
+		if (ezx_blob_load_program(0xbeef, FLASH_TEMP_ADDR,
 						cur_data, remain) < 0)
 			return -1;
 
 		/* pad up to flash block size */
-		remain +=(remain % 0x20000)?(0x20000 - (remain % 0x20000)):0;
+		remain += pad;
 
 		info("Flashing: ");
-		if (ezx_blob_cmd_flash(0xa1000000, cur_addr, remain) < 0)
+		if (ezx_blob_cmd_flash(FLASH_TEMP_ADDR, cur_addr, remain) < 0)
 			return -1;
 		info("OK\n");
 	}
@@ -502,7 +514,6 @@ int main(int argc, char *argv[])
 			free(prog);
 			exit(0);
 		} else if (!strcmp(argv[1], "write")) {
-			char *data;
 			u_int32_t addr;
 
 			if (sscanf(argv[2], "0x%x", &addr) != 1)
@@ -520,14 +531,16 @@ int main(int argc, char *argv[])
 				error("invalid flash file/address");
 				goto exit;
 			}
-			if (!(data = mmap(NULL, st.st_size, PROT_READ, MAP_SHARED, fd, 0))) {
+			if (!(prog = mmap(NULL, st.st_size, PROT_READ, MAP_SHARED, fd, 0))) {
 				error("mmap error: %s", strerror(errno));
 				goto exit;
 			}
-			if (ezx_blob_flash_program(addr,data,st.st_size) < 0) {
+			if (ezx_blob_flash_program(addr,prog,st.st_size) < 0) {
 				error("flash failed");
 				goto exit;
 			}
+			munmap(prog, st.st_size);
+			close(fd);
 			exit(0);
 		} else if (!strcmp(argv[1], "off")) {
 			ezx_blob_send_command("POWER_DOWN", NULL, 0, NULL);
