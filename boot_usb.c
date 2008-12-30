@@ -154,7 +154,7 @@ static int ezx_blob_recv_reply(char *b)
 	if (b)
 		memcpy(b, buf, 8192);
 
-	if (!strncmp(buf, "\x02ERR", 4))
+	if (buf[1] == 0x45 && buf[2] == 0x52 && buf[3] == 0x52)
 		ret = -buf[5];
 
 
@@ -368,7 +368,7 @@ static int ezx_blob_load_program(u_int16_t phone_id, u_int32_t addr, char *data,
 }
 
 #define FLASH_BLOCK_SIZE	0x20000 	/* 128k */
-#define MAX_FLASH_SIZE		0x200000	/* 2MB */
+#define MAX_FLASH_SIZE		0x80000		/* 512k */
 #define FLASH_TEMP_ADDR		0xa0400000
 
 static int ezx_blob_flash_program(u_int32_t addr, char *data, int size)
@@ -382,9 +382,9 @@ static int ezx_blob_flash_program(u_int32_t addr, char *data, int size)
 	      "(%d bytes total, %d flash blocks, %d usb uploads)\n",
 		size, pad, size + pad,
 		(size + pad) / FLASH_BLOCK_SIZE +
-		(size + pad) % FLASH_BLOCK_SIZE ? 1 : 0,
+		((size + pad) % FLASH_BLOCK_SIZE ? 1 : 0),
 		(size + pad) / MAX_FLASH_SIZE +
-		(size + pad) % MAX_FLASH_SIZE ? 1 : 0);
+		((size + pad) % MAX_FLASH_SIZE ? 1 : 0));
 
 	for (cur_addr = addr, cur_data = data;
 	     cur_addr < addr+size;
