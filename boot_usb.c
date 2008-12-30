@@ -426,13 +426,24 @@ int main(int argc, char *argv[])
 	int mach_id = 867; /* 867 is the old EZX mach id */
 
 	if (argc < 2) {
-		info("usage: %s <kernel> [machid] [cmdline] [initrd]\n", argv[0]);
-		info("usage: %s read <addr> <size> <file>\n", argv[0]);
-		info("usage: %s write <addr> <file>\n", argv[0]);
-		info("usage: %s jump <addr>\n");
+		info(
+			"upload a kernel:\n"
+			"   boot_usb <kernel> [machid] [cmdline] [initrd]\n\n"
+			"gen-blob specific commands:\n"
+			"   boot_usb read <addr> <size> <file>\t"
+			"read memory contents (ram or flash)\n"
+			"   boot_usb write <addr> <size> <file>\t"
+			"write to RAM memory\n"
+			"   boot_usb flash <addr> <file>\t\t"
+			"write to flash memory\n"
+			"   boot_usb jump <addr>\t\t\t"
+			"execute code at ram address\n"
+			"   boot_usb off\t\t\t\t"
+			"power off the phone\n"
+		);
 
 		info("\nmachid table:\n"
-		     "\t   0\tDont set mach id\n"
+		     "\t   0\tdon't setup a mach id\n"
 		     "\t 867\told EZX mach id (default)\n"
 		     "\t1740\tA780\n"
 		     "\t1741\tE680\n"
@@ -513,8 +524,14 @@ int main(int argc, char *argv[])
 			close(fd);
 			free(prog);
 			exit(0);
-		} else if (!strcmp(argv[1], "write")) {
+		} else if (!strcmp(argv[1], "flash")) {
 			u_int32_t addr;
+
+			if (argc != 4) {
+				printf("usage: %s flash <addr> <file>\n",
+					argv[0]);
+				exit(1);
+			}
 
 			if (sscanf(argv[2], "0x%x", &addr) != 1)
 				addr = atoi(argv[2]);
@@ -542,11 +559,55 @@ int main(int argc, char *argv[])
 			munmap(prog, st.st_size);
 			close(fd);
 			exit(0);
+		} else if (!strcmp(argv[1], "write")) {
+			u_int32_t addr;
+
+			if (argc != 4) {
+				printf("usage: %s write <addr> <file>\n",
+					argv[0]);
+				exit(1);
+			}
+
+			if (sscanf(argv[2], "0x%x", &addr) != 1)
+				addr = atoi(argv[2]);
+
+			if ((fd = open(argv[3], O_RDONLY)) < 0) {
+				error("%s", strerror(errno));
+				goto exit;
+			}
+			if (fstat(fd, &st) < 0) {
+				error("%s", strerror(errno));
+				goto exit;
+			}
+			if (addr < 0xA0000000 || addr % 0x8 ||
+					(addr + st.st_size) > 0xA400000) {
+				error("invalid RAM address");
+				goto exit;
+			}
+			if (!(prog = mmap(NULL, st.st_size, PROT_READ, MAP_SHARED, fd, 0))) {
+				error("mmap error: %s", strerror(errno));
+				goto exit;
+			}
+			if (ezx_blob_load_program(0xbeef, addr, prog, 
+							st.st_size) < 0) {
+				error("upload failed");
+				goto exit;
+			}
+			munmap(prog, st.st_size);
+			close(fd);
+			exit(0);
 		} else if (!strcmp(argv[1], "off")) {
 			ezx_blob_send_command("POWER_DOWN", NULL, 0, NULL);
 			exit(0);
 		} else if (!strcmp(argv[1], "jump")) {
 			u_int32_t addr;
+
+			if (argc != 3) {
+				printf("usage: %s jump <addr>\n",
+					argv[0]);
+				exit(1);
+			}
+
 			if (sscanf(argv[2], "0x%x", &addr) != 1)
 				addr = atoi(argv[2]);
 			if (addr < 0xa0000000 || addr > 0xa2000000 || addr %8) {
