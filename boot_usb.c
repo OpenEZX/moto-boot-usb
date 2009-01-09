@@ -434,7 +434,7 @@ int main(int argc, char *argv[])
 			"gen-blob specific commands:\n"
 			"   boot_usb read <addr> <size> <file>\t"
 			"read memory contents (ram or flash)\n"
-			"   boot_usb write <addr> <size> <file>\t"
+			"   boot_usb write <addr> <file>\t"
 			"write to RAM memory\n"
 			"   boot_usb flash <addr> <file>\t\t"
 			"write to flash memory\n"
@@ -500,7 +500,7 @@ int main(int argc, char *argv[])
 				exit(1);
 			}
 
-			fd = open(argv[4], O_CREAT | O_WRONLY);
+			fd = open(argv[4], O_CREAT | O_WRONLY, 644);
 		        if (fd < 0 || fstat(fd, &st) < 0) {
 	        	        error("%s: %s", argv[4], strerror(errno));
 		                goto exit;
