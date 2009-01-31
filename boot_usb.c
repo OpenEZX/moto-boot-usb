@@ -500,7 +500,7 @@ int main(int argc, char *argv[])
 				exit(1);
 			}
 
-			fd = open(argv[4], O_CREAT | O_WRONLY, 644);
+			fd = open(argv[4], O_CREAT | O_WRONLY, 0644);
 		        if (fd < 0 || fstat(fd, &st) < 0) {
 	        	        error("%s: %s", argv[4], strerror(errno));
 		                goto exit;
