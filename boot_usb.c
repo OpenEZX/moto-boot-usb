@@ -640,10 +640,11 @@ int main(int argc, char *argv[])
 		else if (!strcmp(argv[2], "dumpkeys"))
 			flag = 0x1EE7F1A6;
 		if (flag) {
-			if (ezx_blob_load_program(phone.product_id, 0xa1000000, (char *)flag, 4, 1) < 0) {
+			if (ezx_blob_load_program(phone.product_id, 0xa1000000, (char *)&flag, 4, 1) < 0) {
 				error("flag send failed");
 				goto exit;
 			}
+		exit(0);
 		} else {
 			printf("usage: %s setflag usb|dumpkeys\n", argv[0]);
 			exit(1);
