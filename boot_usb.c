@@ -494,6 +494,7 @@ int main(int argc, char *argv[])
 		if (!strcmp(argv[1], "read")) {
 			u_int32_t addr;
 			u_int32_t size;
+			int len = 0;
 			char *d;
 
 			if (argc != 5) {
@@ -524,7 +525,14 @@ int main(int argc, char *argv[])
 				error("download failed\n");
 				goto exit;
 			}
-			write(fd, prog, size);
+			while(len < size) {
+				int l = write(fd, prog, size - len);
+				if (l < 0) {
+					error("write error");
+					goto exit;
+				}
+				len += l;
+			}
 			close(fd);
 			free(prog);
 			exit(0);
