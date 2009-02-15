@@ -440,6 +440,8 @@ int main(int argc, char *argv[])
 			"write to flash memory\n"
 			"   boot_usb jump <addr>\t\t\t"
 			"execute code at ram address\n"
+			"   boot_usb setflag usb|dumpkeys\t\t"
+			"set memmory flag for gen-blob\n"
 			"   boot_usb off\t\t\t\t"
 			"power off the phone\n"
 		);
@@ -621,6 +623,21 @@ int main(int argc, char *argv[])
 				goto exit;
 			}
 			exit(0);
+		} else if (!strcmp(argv[1], "setflag")) {
+			unsigned int flag = 0;
+			if (!strcmp(argv[2], "usb"))
+				flag = 0x0D3ADCA7;
+			else if (!strcmp(argv[2], "dumpkeys"))
+				flag = 0x1EE7F1A6;
+			if (flag) {
+				if (ezx_blob_load_program(phone.product_id, 0xa1000000, (char *)flag, 4, 1) < 0) {
+					error("flag send failed");
+					goto exit;
+				}
+			} else {
+				printf("usage: %s setflag usb|dumpkeys\n", argv[0]);
+				exit(1);
+			}
 		}
 	}
 
