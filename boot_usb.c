@@ -548,6 +548,16 @@ int main(int argc, char *argv[])
 			if (sscanf(argv[2], "0x%x", &addr) != 1)
 				addr = atoi(argv[2]);
 
+			/* p3t3r bricked his phone because atoi("e0000") = 0
+			   be more careful about bootloader flashing now */
+			if (addr == 0) {
+				int c = 30;
+				while (c > 0) {
+					printf(">>> WILL FLASH THE BOOTLOADER IN %d SECONDS <<<\n", c--);
+					sleep(1);
+				}
+			}
+
 			if ((fd = open(argv[3], O_RDONLY)) < 0) {
 				error("%s", strerror(errno));
 				goto exit;
