@@ -411,6 +411,22 @@ static int ezx_blob_flash_program(u_int32_t addr, char *data, int size)
 	return 0;
 }
 
+int is_valid_addr(char *addr)
+{
+	int x, is_dec = 1, is_hex = 1;
+	for (x=0;x<strlen(addr);x++) {
+		if ((x == 0 && addr[x] != '0') ||
+		    (x == 1 && addr[x] != 'x') ||
+		    (x > 1 && !isxdigit(addr[x])))
+			is_hex = 0;
+		if(!isdigit(addr[x]))
+			is_dec = 0;
+	}
+	if (!is_dec && !is_hex)
+		return 0;
+	return 1;
+}
+
 #define error(format, arg...) \
 	sprintf(serror, format, ##arg)
 int main(int argc, char *argv[])
@@ -443,7 +459,10 @@ int main(int argc, char *argv[])
 			"   boot_usb setflag usb|dumpkeys\t\t"
 			"set memmory flag for gen-blob\n"
 			"   boot_usb off\t\t\t\t"
-			"power off the phone\n"
+			"power off the phone\n\n"
+			"You can use hexadecimal and decimal for <addr> and\n"
+			"<size> arguments, for hexadecimal you need the '0x'\n"
+			"prefix, just like in C.\n"
 		);
 
 		info("\nmachid table:\n"
@@ -508,6 +527,10 @@ int main(int argc, char *argv[])
 	        	        error("%s: %s", argv[4], strerror(errno));
 		                goto exit;
 			}
+			if (!is_valid_addr(argv[2]) || !is_valid_addr(argv[3])) {
+				error("invalid argument");
+				goto exit;
+			}
 			if ((sscanf(argv[3], "0x%x", &size) != 1))
 				size = atoi(argv[3]);
 			if ((sscanf(argv[2], "0x%x", &addr) != 1))
@@ -538,6 +561,7 @@ int main(int argc, char *argv[])
 			exit(0);
 		} else if (!strcmp(argv[1], "flash")) {
 			u_int32_t addr;
+			int x, is_hex = 1, is_dec = 1;
 
 			if (argc != 4) {
 				printf("usage: %s flash <addr> <file>\n",
@@ -545,11 +569,13 @@ int main(int argc, char *argv[])
 				exit(1);
 			}
 
+			if (!is_valid_addr(argv[2])) {
+				error("invalid argument (%s)", argv[2]);
+				goto exit;
+			}
 			if (sscanf(argv[2], "0x%x", &addr) != 1)
 				addr = atoi(argv[2]);
 
-			/* p3t3r bricked his phone because atoi("e0000") = 0
-			   be more careful about bootloader flashing now */
 			if (addr == 0) {
 				int c = 30;
 				while (c > 0) {
@@ -590,6 +616,10 @@ int main(int argc, char *argv[])
 				exit(1);
 			}
 
+			if (!is_valid_addr(argv[2])) {
+				error("invalid argument (%s)", argv[2]);
+				goto exit;
+			}
 			if (sscanf(argv[2], "0x%x", &addr) != 1)
 				addr = atoi(argv[2]);
 
@@ -630,6 +660,10 @@ int main(int argc, char *argv[])
 				exit(1);
 			}
 
+			if (!is_valid_addr(argv[2])) {
+				error("invalid argument (%s)", argv[2]);
+				goto exit;
+			}
 			if (sscanf(argv[2], "0x%x", &addr) != 1)
 				addr = atoi(argv[2]);
 			if (addr < 0xa0000000 || addr > 0xa2000000 || addr %8) {
