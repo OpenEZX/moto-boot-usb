@@ -29,6 +29,7 @@
 #include <string.h>
 #include <getopt.h>
 #include <errno.h>
+#include <ctype.h>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -41,18 +42,18 @@
 
 //#define DEBUG
 
-#define info(format, arg...) \
-	printf(format, ##arg); fflush(stdout)
+#define info(...) \
+	printf(__VA_ARGS__); fflush(stdout)
 
 static char serror[1024];
-#define error(format, arg...) \
-	sprintf(serror, format, ##arg)
+#define error(...) \
+	sprintf(serror, __VA_ARGS__)
 
 #ifdef DEBUG
-#define dbg(format, arg...) \
-	printf(format "\n", ## arg)
+#define dbg(format, ...) \
+	printf(format "\n", ## __VA_ARGS__)
 #else
-#define dbg(format, arg...)
+#define dbg(format, ...)
 #endif
 
 #ifdef DEBUG
@@ -74,14 +75,14 @@ const char *hexdump(const void *data, unsigned int len)
 #endif
 
 struct phonetype {
-	char *name;
+	const char *name;
 	u_int16_t product_id;
 	u_int8_t out_ep;
 	u_int8_t in_ep;
 	u_int32_t kernel_addr;
 	u_int32_t initrd_addr;
 	u_int32_t params_addr;
-	char *code;
+	const char *code;
 	int code_size;
 };
 
@@ -97,6 +98,7 @@ struct phonetype {
 #define pxa_code_s 16
 
 #define EZX_VENDOR_ID 0x22b8
+#define USB_TIMEOUT 5000
 struct phonetype phonetypes[] = {
 { "A780/E680",        0x6003, 0x02, 0x81, 0xa0200000, 0xa0400000, 0xa0000100, pxa_code, pxa_code_s },
 { "Generic Blob",     0xbeef, 0x02, 0x81, 0xa0200000, 0xa0400000, 0xa0000100, pxa_code, pxa_code_s }, /* pxa_code is temporary here */
@@ -111,7 +113,7 @@ struct phonetype phonetypes[] = {
 #define	ETX	0x03
 #define	RS	0x1E
 
-struct phonetype phone = { "Unknown", 0, 0, 0, 0, 0, 0 };
+struct phonetype phone = { "Unknown", 0, 0, 0, 0, 0, 0, NULL, 0 };
 
 static struct usb_dev_handle *hdl;
 static struct usb_device *find_ezx_device(void)
@@ -146,7 +148,7 @@ static struct usb_device *find_ezx_device(void)
 static int ezx_blob_recv_reply(char *b)
 {
 	char buf[8192];
-	int ret, i;
+	int ret;
 
 	memset(buf, 0, sizeof(buf));
 
@@ -163,8 +165,7 @@ static int ezx_blob_recv_reply(char *b)
 	return ret;
 }
 
-
-static int ezx_blob_send_command(char *command, char *payload, int len, char *reply)
+static int ezx_blob_send_command(const char *command, char *payload, int len, char *reply)
 {
 	char buf[8192];
 	int cmdlen = strlen(command);
@@ -200,7 +201,7 @@ static int ezx_blob_send_command(char *command, char *payload, int len, char *re
 	 * data too fast
 	 */
 	/*
-	usleep(5000);
+	usleep(USB_TIMEOUT);
 	*/
 
 	return ezx_blob_recv_reply(reply);
@@ -250,7 +251,7 @@ static int ezx_blob_cmd_jump(u_int32_t addr)
 	return ezx_blob_send_command("JUMP", buf, len, NULL);
 }
 
-static int ezx_blob_cmd_rbin(u_int32_t addr, u_int16_t size, u_int8_t *response)
+static int ezx_blob_cmd_rbin(u_int32_t addr, u_int16_t size, char *response)
 {
 	char buf[128];
 	char reply[8192];
@@ -327,7 +328,7 @@ static int ezx_blob_dload_program(u_int32_t addr, char *data, int size, int v)
 	char *cur_data;
 	int err;
 	for (cur_addr = addr, cur_data = data;
-	     cur_addr < addr+size;
+	     cur_addr < (addr + size);
 	     cur_addr += CHUNK_SIZE, cur_data += CHUNK_SIZE) {
 		int remain = (data + size) - cur_data;
 		if (remain > CHUNK_SIZE)
@@ -350,13 +351,13 @@ static int ezx_blob_load_program(u_int16_t phone_id, u_int32_t addr, char *data,
 {
 	u_int32_t cur_addr;
 	char *cur_data;
-	int err;
+	int err = 0;
 
 	if(!addr) /* workaround for missing values */
 		return -1;
 
 	for (cur_addr = addr, cur_data = data;
-	     cur_addr < addr+size;
+	     cur_addr < (addr + size);
 	     cur_addr += CHUNK_SIZE, cur_data += CHUNK_SIZE) {
 		int remain;
 		if (phone_id == 0x6023) /* A1200 needs a fixed chunk size*/
@@ -425,9 +426,9 @@ static int ezx_blob_flash_program(u_int32_t addr, char *data, int size)
 	return 0;
 }
 
-int is_valid_addr(char *addr)
+static int is_valid_addr(char *addr)
 {
-	int x, is_dec = 1, is_hex = 1;
+	unsigned int x, is_dec = 1, is_hex = 1;
 	for (x = 0; x < strlen(addr); x++) {
 		if ((x == 0 && addr[x] != '0') ||
 		    (x == 1 && addr[x] != 'x') ||
@@ -469,7 +470,8 @@ int main(int argc, char *argv[])
 		     "   boot_usb setflag usb|dumpkeys\t\t"
 		     "set memmory flag for gen-blob\n"
 		     "   boot_usb off\t\t\t\t"
-		     "power off the phone\n\n"
+		     "power off the phone\n\n");
+		info("upload a kernel:\n"
 		     "You can use hexadecimal and decimal for <addr> and\n"
 		     "<size> arguments, for hexadecimal you need the '0x'\n"
 		     "prefix, just like in C.\n"
@@ -523,8 +525,7 @@ int main(int argc, char *argv[])
 		if (!strcmp(argv[1], "read")) {
 			u_int32_t addr;
 			u_int32_t size;
-			int len = 0;
-			char *d;
+			unsigned int len = 0;
 
 			if (argc != 5) {
 				printf("usage: %s read <addr> <size> <file>\n",
@@ -572,7 +573,6 @@ int main(int argc, char *argv[])
 			exit(0);
 		} else if (!strcmp(argv[1], "flash")) {
 			u_int32_t addr;
-			int x, is_hex = 1, is_dec = 1;
 
 			if (argc != 4) {
 				printf("usage: %s flash <addr> <file>\n",
