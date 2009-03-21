@@ -60,15 +60,15 @@ static char serror[1024];
 const char *hexdump(const void *data, unsigned int len)
 {
 	static char string[65535];
-	unsigned char *d = (unsigned char *) data;
+	unsigned char *d = (unsigned char *)data;
 	unsigned int i, left;
 
 	string[0] = '\0';
 	left = sizeof(string);
 	for (i = 0; len--; i += 3) {
-		if (i >= sizeof(string) -4)
+		if (i >= sizeof(string) - 4)
 			break;
-		snprintf(string+i, 4, " %02x", *d++);
+		snprintf(string + i, 4, " %02x", *d++);
 	}
 	return string;
 }
@@ -189,7 +189,7 @@ static int ezx_blob_send_command(const char *command, char *payload, int len, ch
 	if (!strcasecmp(command, "bin"))
 		dbg("TX: %u bytes", cur);
 	else
-		dbg("TX: %s (%s)", buf,  hexdump(buf, cur));
+		dbg("TX: %s (%s)", buf, hexdump(buf, cur));
 #endif
 
 	ret = usb_bulk_write(hdl, phone.out_ep, buf, cur, 0);
@@ -298,7 +298,7 @@ static int ezx_blob_cmd_bin(char *data, u_int16_t size)
 
 	*(u_int16_t *)buf = htons(size);
 	memcpy(buf + 2, data, size);
-	buf[size+2] = ezx_csum(data, size);
+	buf[size + 2] = ezx_csum(data, size);
 
 	return ezx_blob_send_command("BIN", buf, size + 3, NULL);
 }
@@ -337,7 +337,7 @@ static int ezx_blob_dload_program(u_int32_t addr, char *data, int size, int v)
 			break;
 		if (v)
 			info("\b\b\b%02d%%",
-					(int)((100 * (cur_data - data)) / size));
+			     (int)((100 * (cur_data - data)) / size));
 	}
 	if (err < 0)
 		return err;
@@ -353,14 +353,14 @@ static int ezx_blob_load_program(u_int16_t phone_id, u_int32_t addr, char *data,
 	char *cur_data;
 	int err = 0;
 
-	if(!addr) /* workaround for missing values */
+	if (!addr) /* workaround for missing values */
 		return -1;
 
 	for (cur_addr = addr, cur_data = data;
 	     cur_addr < (addr + size);
 	     cur_addr += CHUNK_SIZE, cur_data += CHUNK_SIZE) {
 		int remain;
-		if (phone_id == 0x6023) /* A1200 needs a fixed chunk size*/
+		if (phone_id == 0x6023) /* A1200 needs a fixed chunk size */
 			remain = 4096;
 		else
 			remain = (data + size) - cur_data;
@@ -373,7 +373,7 @@ static int ezx_blob_load_program(u_int16_t phone_id, u_int32_t addr, char *data,
 			break;
 		if (v)
 			info("\b\b\b%02d%%",
-					(int)((100 * (cur_data - data)) / size));
+			     (int)((100 * (cur_data - data)) / size));
 	}
 	if (err < 0)
 		return err;
@@ -420,7 +420,7 @@ static int ezx_blob_flash_program(u_int32_t addr, char *data, int size)
 			return -1;
 
 		info("\b\b\b%02d%%",
-				(int)((100 * (cur_data - data)) / size));
+		     (int)((100 * (cur_data - data)) / size));
 	}
 	info("\b\b\b\b100%% OK\n");
 	return 0;
@@ -434,7 +434,7 @@ static int is_valid_addr(char *addr)
 		    (x == 1 && addr[x] != 'x') ||
 		    (x > 1 && !isxdigit(addr[x])))
 			is_hex = 0;
-		if(!isdigit(addr[x]))
+		if (!isdigit(addr[x]))
 			is_dec = 0;
 	}
 	if (!is_dec && !is_hex)
@@ -474,8 +474,7 @@ int main(int argc, char *argv[])
 		info("upload a kernel:\n"
 		     "You can use hexadecimal and decimal for <addr> and\n"
 		     "<size> arguments, for hexadecimal you need the '0x'\n"
-		     "prefix, just like in C.\n"
-		);
+		     "prefix, just like in C.\n");
 
 		info("\nmachid table:\n"
 		     "\t   0\tdon't setup a mach id\n"
@@ -534,9 +533,9 @@ int main(int argc, char *argv[])
 			}
 
 			fd = open(argv[4], O_CREAT | O_WRONLY, 0644);
-		        if (fd < 0 || fstat(fd, &st) < 0) {
-	        	        error("%s: %s", argv[4], strerror(errno));
-		                goto exit;
+			if (fd < 0 || fstat(fd, &st) < 0) {
+				error("%s: %s", argv[4], strerror(errno));
+				goto exit;
 			}
 			if (!is_valid_addr(argv[2]) || !is_valid_addr(argv[3])) {
 				error("invalid argument");
@@ -552,7 +551,7 @@ int main(int argc, char *argv[])
 				goto exit;
 			}
 			info("Downloading:     ");
-			if((prog = malloc(size)) == NULL) {
+			if ((prog = malloc(size)) == NULL) {
 				error("failed to alloc memory");
 				goto exit;
 			}
@@ -677,7 +676,7 @@ int main(int argc, char *argv[])
 			}
 			if (sscanf(argv[2], "0x%x", &addr) != 1)
 				addr = atoi(argv[2]);
-			if (addr < 0xa0000000 || addr > 0xa2000000 || addr %8) {
+			if (addr < 0xa0000000 || addr > 0xa2000000 || addr % 8) {
 				error("invalid addr");
 				goto exit;
 			}
@@ -699,7 +698,7 @@ int main(int argc, char *argv[])
 				error("flag send failed");
 				goto exit;
 			}
-		exit(0);
+			exit(0);
 		} else {
 			printf("usage: %s setflag usb|dumpkeys\n", argv[0]);
 			exit(1);
