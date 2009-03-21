@@ -98,7 +98,6 @@ struct phonetype {
 #define pxa_code_s 16
 
 #define EZX_VENDOR_ID 0x22b8
-#define USB_TIMEOUT 5000
 struct phonetype phonetypes[] = {
 { "A780/E680",        0x6003, 0x02, 0x81, 0xa0200000, 0xa0400000, 0xa0000100, pxa_code, pxa_code_s },
 { "Generic Blob",     0xbeef, 0x02, 0x81, 0xa0200000, 0xa0400000, 0xa0000100, pxa_code, pxa_code_s }, /* pxa_code is temporary here */
@@ -115,7 +114,12 @@ struct phonetype phonetypes[] = {
 
 struct phonetype phone = { "Unknown", 0, 0, 0, 0, 0, 0, NULL, 0 };
 
-static struct usb_dev_handle *hdl;
+
+/* usb handling */
+
+#define USB_TIMEOUT 5000
+static struct usb_dev_handle *hdl = NULL;
+
 static struct usb_device *find_ezx_device(void)
 {
 	struct usb_bus *bus;
@@ -144,6 +148,53 @@ static struct usb_device *find_ezx_device(void)
 	info("none.\n");
 	return NULL;
 }
+
+static void ezx_device_close(void)
+{
+	if (hdl != NULL) {
+		usb_close(hdl);
+		hdl = NULL;
+	}
+}
+
+static void ezx_device_open()
+{
+	struct usb_device *dev;
+
+	usb_init();
+	if (!usb_find_busses())
+		exit(1);
+	if (!usb_find_devices())
+		exit(1);
+
+	dev = find_ezx_device();
+	if (!dev) {
+		error("cannot find known EZX device in bootloader mode");
+		goto exit;
+	}
+	if (!(hdl = usb_open(dev))) {
+		error("open usb device: %s", usb_strerror());
+		goto exit;
+	}
+
+	/* Remember to close the device at exit */
+	atexit(ezx_device_close);
+
+	if (usb_claim_interface(hdl, 0) < 0) {
+		error("claim usb interface 1 of device: %s", usb_strerror());
+		goto exit;
+	}
+
+	return;
+
+exit:
+	info("ezx_device_open FAILED: %s\n", serror);
+	exit(1);
+}
+
+
+
+/* Blob commands */
 
 static int ezx_blob_recv_reply(char *b)
 {
@@ -444,7 +495,6 @@ static int is_valid_addr(char *addr)
 
 int main(int argc, char *argv[])
 {
-	struct usb_device *dev;
 	char *prog;
 	struct stat st;
 	int fd;
@@ -490,25 +540,9 @@ int main(int argc, char *argv[])
 		goto exit;
 	}
 
-	usb_init();
-	if (!usb_find_busses())
-		exit(1);
-	if (!usb_find_devices())
-		exit(1);
 
-	dev = find_ezx_device();
-	if (!dev) {
-		error("cannot find known EZX device in bootloader mode");
-		goto exit;
-	}
-	if (!(hdl = usb_open(dev))) {
-		error("open usb device: %s", usb_strerror());
-		goto exit;
-	}
-	if (usb_claim_interface(hdl, 0) < 0) {
-		error("claim usb interface 1 of device: %s", usb_strerror());
-		goto exit;
-	}
+	ezx_device_open();
+
 
 //#ifdef DEBUG /* query information only if debugging */
 	if (ezx_blob_send_command("RQSN", NULL, 0, NULL) < 0) {
