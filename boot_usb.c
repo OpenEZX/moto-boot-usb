@@ -44,6 +44,10 @@
 #define info(format, arg...) \
 	printf(format, ##arg); fflush(stdout)
 
+static char serror[1024];
+#define error(format, arg...) \
+	sprintf(serror, format, ##arg)
+
 #ifdef DEBUG
 #define dbg(format, arg...) \
 	printf(format "\n", ## arg)
@@ -52,8 +56,7 @@
 #endif
 
 #ifdef DEBUG
-const char *
-hexdump(const void *data, unsigned int len)
+const char *hexdump(const void *data, unsigned int len)
 {
 	static char string[65535];
 	unsigned char *d = (unsigned char *) data;
@@ -100,7 +103,7 @@ struct phonetype phonetypes[] = {
 { "A780/E680 Blob2",  0x6021, 0x02, 0x81, 0xa0300000, 0xa0400000, 0xa0000100, pxa_code, pxa_code_s },
 { "E2/A1200/E6/A910", 0x6023, 0x01, 0x82, 0xa0de0000, /*FIXME*/0, /*FIXME*/0, pxa_code, pxa_code_s },
 { "RAZR2 V8",         0x6403, 0x01, 0x82, 0xa0de0000, /*FIXME*/0, /*FIXME*/0, NULL, 0 },
-{ "Unknown",          0x0000, 0x00, 0x00, 0x00000000, 0x00000000, 0x00000000, NULL,	0 }
+{ "Unknown",          0x0000, 0x00, 0x00, 0x00000000, 0x00000000, 0x00000000, NULL, 0 }
 };
 
 #define NUL	0x00
@@ -119,16 +122,16 @@ static struct usb_device *find_ezx_device(void)
 	for (bus = usb_busses; bus; bus = bus->next) {
 		struct usb_device *dev;
 		for (dev = bus->devices; dev; dev = dev->next) {
-			if (dev->descriptor.idVendor == EZX_VENDOR_ID)
-			{
+			if (dev->descriptor.idVendor == EZX_VENDOR_ID) {
 				int n;
-				for (n=0;phonetypes[n].product_id!=0;n++) {
-					if (dev->descriptor.idProduct == phonetypes[n].product_id)
+				for (n = 0; phonetypes[n].product_id != 0; n++) {
+					if (dev->descriptor.idProduct ==
+							phonetypes[n].product_id)
 						phone = phonetypes[n];
 				}
 				if (phone.product_id == 0) {
 					info("Unknown EZX phone (%04x).\n",
-						dev->descriptor.idProduct);
+							dev->descriptor.idProduct);
 					return NULL;
 				}
 				info("%s found.\n", phone.name);
@@ -157,7 +160,6 @@ static int ezx_blob_recv_reply(char *b)
 	if (buf[1] == 0x45 && buf[2] == 0x52 && buf[3] == 0x52)
 		ret = -buf[5];
 
-
 	return ret;
 }
 
@@ -181,12 +183,14 @@ static int ezx_blob_send_command(char *command, char *payload, int len, char *re
 		cur += len;
 	}
 	buf[cur++] = ETX;
+
 #ifdef DEBUG
 	if (!strcasecmp(command, "bin"))
 		dbg("TX: %u bytes", cur);
 	else
 		dbg("TX: %s (%s)", buf,  hexdump(buf, cur));
 #endif
+
 	ret = usb_bulk_write(hdl, phone.out_ep, buf, cur, 0);
 	if (ret < 0)
 		return ret;
@@ -195,7 +199,9 @@ static int ezx_blob_send_command(char *command, char *payload, int len, char *re
 	 * apparently some race condition in the bootloader if we feed
 	 * data too fast
 	 */
-//	 usleep(5000);
+	/*
+	usleep(5000);
+	*/
 
 	return ezx_blob_recv_reply(reply);
 }
@@ -220,7 +226,7 @@ static int ezx_blob_cmd_addr(u_int32_t addr)
 
 	len = snprintf(buf, sizeof(buf), "%08X", addr);
 	csum = ezx_csum(buf, 8);
-	len += snprintf(buf+8, sizeof(buf)-len, "%02X", csum);
+	len += snprintf(buf + 8, sizeof(buf) - len, "%02X", csum);
 
 	if (len != 10)
 		return -1;
@@ -236,7 +242,7 @@ static int ezx_blob_cmd_jump(u_int32_t addr)
 
 	len = snprintf(buf, sizeof(buf), "%08X", addr);
 	csum = ezx_csum(buf, 8);
-	len += snprintf(buf+8, sizeof(buf)-len, "%02X", csum);
+	len += snprintf(buf + 8, sizeof(buf) - len, "%02X", csum);
 
 	if (len != 10)
 		return -1;
@@ -255,7 +261,7 @@ static int ezx_blob_cmd_rbin(u_int32_t addr, u_int16_t size, u_int8_t *response)
 
 	len = snprintf(buf, sizeof(buf), "%08X%04X", addr, size);
 	csum = ezx_csum(buf, 12);
-	len += snprintf(buf+12, sizeof(buf)-len, "%02X", csum);
+	len += snprintf(buf + 12, sizeof(buf) - len, "%02X", csum);
 
 	if (len != 14)
 		return -1;
@@ -280,7 +286,7 @@ static int ezx_blob_cmd_rbin(u_int32_t addr, u_int16_t size, u_int8_t *response)
 
 static int ezx_blob_cmd_bin(char *data, u_int16_t size)
 {
-	char buf[8192+2+1];
+	char buf[8192 + 2 + 1];
 
 	size += (size % 8) ? (8 - (size % 8)) : 0;
 
@@ -290,10 +296,10 @@ static int ezx_blob_cmd_bin(char *data, u_int16_t size)
 	memset(buf, 0, sizeof(buf));
 
 	*(u_int16_t *)buf = htons(size);
-	memcpy(buf+2, data, size);
+	memcpy(buf + 2, data, size);
 	buf[size+2] = ezx_csum(data, size);
 
-	return ezx_blob_send_command("BIN", buf, size+3, NULL);
+	return ezx_blob_send_command("BIN", buf, size + 3, NULL);
 }
 
 static int ezx_blob_cmd_flash(u_int32_t source, u_int32_t dest, u_int32_t size)
@@ -303,10 +309,10 @@ static int ezx_blob_cmd_flash(u_int32_t source, u_int32_t dest, u_int32_t size)
 	int len;
 
 	len = snprintf(buf, sizeof(buf), "%08X", source);
-	len += snprintf(buf+8, sizeof(buf)-len, "%08X", dest);
-	len += snprintf(buf+16, sizeof(buf)-len, "%08X", size);
+	len += snprintf(buf + 8, sizeof(buf) - len, "%08X", dest);
+	len += snprintf(buf + 16, sizeof(buf) - len, "%08X", size);
 	csum = ezx_csum(buf, 24);
-	len += snprintf(buf+24, sizeof(buf)-len, "%02X", csum);
+	len += snprintf(buf + 24, sizeof(buf) - len, "%02X", csum);
 
 	if (len != 26)
 		return -1;
@@ -329,10 +335,14 @@ static int ezx_blob_dload_program(u_int32_t addr, char *data, int size, int v)
 		if ((err = ezx_blob_cmd_rbin(cur_addr, remain, cur_data)) < 0)
 			break;
 		if (v)
-			info("\b\b\b%02d%%",(int)((100*(cur_data-data))/size));
+			info("\b\b\b%02d%%",
+					(int)((100 * (cur_data - data)) / size));
 	}
-	if (err < 0) return err;
-	if (v) info("\b\b\b\b100%% OK\n");
+	if (err < 0)
+		return err;
+	if (v)
+		info("\b\b\b\b100%% OK\n");
+
 	return 0;
 }
 
@@ -361,10 +371,13 @@ static int ezx_blob_load_program(u_int16_t phone_id, u_int32_t addr, char *data,
 		if ((err = ezx_blob_cmd_bin(cur_data, remain)) < 0)
 			break;
 		if (v)
-			info("\b\b\b%02d%%",(int)((100*(cur_data-data))/size));
+			info("\b\b\b%02d%%",
+					(int)((100 * (cur_data - data)) / size));
 	}
-	if (err < 0) return err;
-	if (v) info("\b\b\b\b100%% OK\n");
+	if (err < 0)
+		return err;
+	if (v)
+		info("\b\b\b\b100%% OK\n");
 	return 0;
 }
 
@@ -405,7 +418,8 @@ static int ezx_blob_flash_program(u_int32_t addr, char *data, int size)
 		if (ezx_blob_cmd_flash(FLASH_TEMP_ADDR, cur_addr, remain) < 0)
 			return -1;
 
-		info("\b\b\b%02d%%",(int)((100*(cur_data-data))/size));
+		info("\b\b\b%02d%%",
+				(int)((100 * (cur_data - data)) / size));
 	}
 	info("\b\b\b\b100%% OK\n");
 	return 0;
@@ -414,7 +428,7 @@ static int ezx_blob_flash_program(u_int32_t addr, char *data, int size)
 int is_valid_addr(char *addr)
 {
 	int x, is_dec = 1, is_hex = 1;
-	for (x=0;x<strlen(addr);x++) {
+	for (x = 0; x < strlen(addr); x++) {
 		if ((x == 0 && addr[x] != '0') ||
 		    (x == 1 && addr[x] != 'x') ||
 		    (x > 1 && !isxdigit(addr[x])))
@@ -427,15 +441,12 @@ int is_valid_addr(char *addr)
 	return 1;
 }
 
-#define error(format, arg...) \
-	sprintf(serror, format, ##arg)
 int main(int argc, char *argv[])
 {
 	struct usb_device *dev;
 	char *prog;
 	struct stat st;
 	int fd;
-	char serror[1024];
 	struct tag *tag;
 	struct tag *first_tag;
 	int tagsize;
@@ -444,25 +455,24 @@ int main(int argc, char *argv[])
 	int mach_id = 867; /* 867 is the old EZX mach id */
 
 	if (argc < 2) {
-		info(
-			"upload a kernel:\n"
-			"   boot_usb <kernel> [machid] [cmdline] [initrd]\n\n"
-			"gen-blob specific commands:\n"
-			"   boot_usb read <addr> <size> <file>\t"
-			"read memory contents (ram or flash)\n"
-			"   boot_usb write <addr> <file>\t"
-			"write to RAM memory\n"
-			"   boot_usb flash <addr> <file>\t\t"
-			"write to flash memory\n"
-			"   boot_usb jump <addr>\t\t\t"
-			"execute code at ram address\n"
-			"   boot_usb setflag usb|dumpkeys\t\t"
-			"set memmory flag for gen-blob\n"
-			"   boot_usb off\t\t\t\t"
-			"power off the phone\n\n"
-			"You can use hexadecimal and decimal for <addr> and\n"
-			"<size> arguments, for hexadecimal you need the '0x'\n"
-			"prefix, just like in C.\n"
+		info("upload a kernel:\n"
+		     "   boot_usb <kernel> [machid] [cmdline] [initrd]\n\n"
+		     "gen-blob specific commands:\n"
+		     "   boot_usb read <addr> <size> <file>\t"
+		     "read memory contents (ram or flash)\n"
+		     "   boot_usb write <addr> <file>\t"
+		     "write to RAM memory\n"
+		     "   boot_usb flash <addr> <file>\t\t"
+		     "write to flash memory\n"
+		     "   boot_usb jump <addr>\t\t\t"
+		     "execute code at ram address\n"
+		     "   boot_usb setflag usb|dumpkeys\t\t"
+		     "set memmory flag for gen-blob\n"
+		     "   boot_usb off\t\t\t\t"
+		     "power off the phone\n\n"
+		     "You can use hexadecimal and decimal for <addr> and\n"
+		     "<size> arguments, for hexadecimal you need the '0x'\n"
+		     "prefix, just like in C.\n"
 		);
 
 		info("\nmachid table:\n"
@@ -535,6 +545,7 @@ int main(int argc, char *argv[])
 				size = atoi(argv[3]);
 			if ((sscanf(argv[2], "0x%x", &addr) != 1))
 				addr = atoi(argv[2]);
+
 			if (size < 8 || size % 8 || addr < 0 || addr % 8) {
 				error("invalid parameter %d %d", addr, size);
 				goto exit;
@@ -548,7 +559,7 @@ int main(int argc, char *argv[])
 				error("download failed\n");
 				goto exit;
 			}
-			while(len < size) {
+			while (len < size) {
 				int l = write(fd, prog, size - len);
 				if (l < 0) {
 					error("write error");
@@ -600,7 +611,7 @@ int main(int argc, char *argv[])
 				error("mmap error: %s", strerror(errno));
 				goto exit;
 			}
-			if (ezx_blob_flash_program(addr,prog,st.st_size) < 0) {
+			if (ezx_blob_flash_program(addr, prog, st.st_size) < 0) {
 				error("flash failed");
 				goto exit;
 			}
@@ -640,7 +651,7 @@ int main(int argc, char *argv[])
 				error("mmap error: %s", strerror(errno));
 				goto exit;
 			}
-			if (ezx_blob_load_program(0xbeef, addr, prog, 
+			if (ezx_blob_load_program(0xbeef, addr, prog,
 							st.st_size, 1) < 0) {
 				error("upload failed");
 				goto exit;
@@ -675,7 +686,7 @@ int main(int argc, char *argv[])
 				goto exit;
 			}
 			exit(0);
-		} 
+		}
 	}
 	if (!strcmp(argv[1], "setflag")) {
 		unsigned int flag = 0;
@@ -720,7 +731,7 @@ int main(int argc, char *argv[])
 		}
 		memset(asm_code, 0, sizeof(asm_code));
 		memcpy(asm_code, phone.code, phone.code_size);
-		*(u_int32_t *)(asm_code+phone.code_size) = mach_id;
+		*(u_int32_t *)(asm_code + phone.code_size) = mach_id;
 
 		if (ezx_blob_load_program(phone.product_id, phone.kernel_addr, asm_code, CHUNK_SIZE, 1) < 0) {
 			error("asm code send failed");
@@ -730,7 +741,7 @@ int main(int argc, char *argv[])
 	}
 
 	info("Uploading kernel:     ");
-	if (ezx_blob_load_program(phone.product_id, phone.kernel_addr+k_offset, prog, st.st_size, 1) < 0) {
+	if (ezx_blob_load_program(phone.product_id, phone.kernel_addr + k_offset, prog, st.st_size, 1) < 0) {
 		error("kernel upload failed");
 		goto exit;
 	}
@@ -841,6 +852,7 @@ run_kernel:
 	}
 	info("DONE\n");
 	exit(0);
+
 exit:
 	info("FAILED: %s\n", serror);
 	exit(1);
