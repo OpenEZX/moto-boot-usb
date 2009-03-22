@@ -188,7 +188,7 @@ static void ezx_device_open()
 	atexit(ezx_device_close);
 
 	if (usb_claim_interface(hdl, 0) < 0) {
-		error("claim usb interface 1 of device: %s", usb_strerror());
+		error("claim usb interface 0 of device: %s", usb_strerror());
 		exit(1);
 	}
 }
