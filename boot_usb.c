@@ -528,6 +528,157 @@ static void usage()
 	     "\t1745\tA910\n\n");
 }
 
+/* boot_usb commands */
+
+static void boot_usb_cmd_read(u_int32_t addr, u_int32_t size, const char *outfilename)
+{
+	char *prog;
+	int fd;
+	struct stat st;
+	unsigned int len = 0;
+
+	fd = open(outfilename, O_CREAT | O_WRONLY, 0644);
+	if (fd < 0 || fstat(fd, &st) < 0) {
+		error("%s: %s", outfilename, strerror(errno));
+		exit(1);
+	}
+
+	if (size < 8 || size % 8 || addr < 0 || addr % 8) {
+		error("invalid parameter %d %d", addr, size);
+		exit(1);
+	}
+	info("Downloading:     ");
+	if ((prog = malloc(size)) == NULL) {
+		error("failed to alloc memory");
+		exit(1);
+	}
+	if (ezx_blob_dload_program(addr, prog, size, 1)) {
+		error("download failed\n");
+		exit(1);
+	}
+	while (len < size) {
+		int l = write(fd, prog, size - len);
+		if (l < 0) {
+			error("write error");
+			exit(1);
+		}
+		len += l;
+	}
+
+	close(fd);
+	free(prog);
+	exit(0);
+}
+
+static void boot_usb_cmd_flash(u_int32_t addr, const char *infilename)
+{
+	char *prog;
+	int fd;
+	struct stat st;
+
+	fd = open(infilename, O_RDONLY);
+	if (fd < 0) {
+		error("%s", strerror(errno));
+		exit(1);
+	}
+	if (fstat(fd, &st) < 0) {
+		error("%s", strerror(errno));
+		exit(1);
+	}
+	if ((addr + st.st_size) > 0x4000000 || addr % 0x20000) {
+		error("invalid flash file/address");
+		exit(1);
+	}
+
+	if (!(prog = mmap(NULL, st.st_size, PROT_READ, MAP_SHARED, fd, 0))) {
+		error("mmap error: %s", strerror(errno));
+		exit(1);
+	}
+	if (ezx_blob_flash_program(addr, prog, st.st_size) < 0) {
+		error("flash failed");
+		exit(1);
+	}
+
+	munmap(prog, st.st_size);
+	close(fd);
+	exit(0);
+}
+
+static void boot_usb_cmd_write(u_int32_t addr, const char *infilename)
+{
+	char *prog;
+	int fd;
+	struct stat st;
+
+	fd = open(infilename, O_RDONLY);
+	if (fd < 0) {
+		error("%s", strerror(errno));
+		exit(1);
+	}
+	if (fstat(fd, &st) < 0) {
+		error("%s", strerror(errno));
+		exit(1);
+	}
+	if (addr < 0xA0000000 || addr % 0x8 ||
+			(addr + st.st_size) > 0xA400000) {
+		error("invalid RAM address");
+		exit(1);
+	}
+
+	if (!(prog = mmap(NULL, st.st_size, PROT_READ, MAP_SHARED, fd, 0))) {
+		error("mmap error: %s", strerror(errno));
+		exit(1);
+	}
+	if (ezx_blob_load_program(0xbeef, addr, prog,
+					st.st_size, 1) < 0) {
+		error("upload failed");
+		exit(1);
+	}
+	munmap(prog, st.st_size);
+	close(fd);
+	exit(0);
+}
+
+static void boot_usb_cmd_off()
+{
+	ezx_blob_send_command("POWER_DOWN", NULL, 0, NULL);
+	exit(0);
+}
+
+static void boot_usb_cmd_jump(u_int32_t addr)
+{
+	if (addr < 0xa0000000 || addr > 0xa2000000 || addr % 8) {
+		error("invalid addr");
+		exit(1);
+	}
+	if (ezx_blob_cmd_jump(addr) < 0) {
+		error("jump failed");
+		exit(1);
+	}
+	exit(0);
+}
+
+static void boot_usb_cmd_setflag(const char *flagname)
+{
+	unsigned int flag = 0;
+
+	if (!strcmp(flagname, "usb"))
+		flag = 0x0D3ADCA7;
+	else if (!strcmp(flagname, "dumpkeys"))
+		flag = 0x1EE7F1A6;
+	else {
+		error("unknown flag name '%s', use either usb or dumpkeys",
+				flagname);
+		exit(1);
+	}
+
+	if (ezx_blob_load_program(phone.product_id, 0xa1000000, (char *)&flag, 4, 1) < 0) {
+		error("flag send failed");
+		exit(1);
+	}
+	exit(0);
+}
+
 int main(int argc, char *argv[])
 {
 	char *prog;
@@ -559,56 +710,28 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 //#endif
+
 	if (phone.product_id == 0xbeef) {
 		if (!strcmp(argv[1], "read")) {
 			u_int32_t addr;
 			u_int32_t size;
-			unsigned int len = 0;
 
 			if (argc != 5) {
 				printf("usage: %s read <addr> <size> <file>\n",
 					argv[0]);
 				exit(1);
 			}
-
-			fd = open(argv[4], O_CREAT | O_WRONLY, 0644);
-			if (fd < 0 || fstat(fd, &st) < 0) {
-				error("%s: %s", argv[4], strerror(errno));
-				exit(1);
-			}
 			if (!is_valid_addr(argv[2]) || !is_valid_addr(argv[3])) {
 				error("invalid argument");
 				exit(1);
 			}
-			if ((sscanf(argv[3], "0x%x", &size) != 1))
-				size = atoi(argv[3]);
 			if ((sscanf(argv[2], "0x%x", &addr) != 1))
 				addr = atoi(argv[2]);
+			if ((sscanf(argv[3], "0x%x", &size) != 1))
+				size = atoi(argv[3]);
 
-			if (size < 8 || size % 8 || addr < 0 || addr % 8) {
-				error("invalid parameter %d %d", addr, size);
-				exit(1);
-			}
-			info("Downloading:     ");
-			if ((prog = malloc(size)) == NULL) {
-				error("failed to alloc memory");
-				exit(1);
-			}
-			if (ezx_blob_dload_program(addr, prog, size, 1)) {
-				error("download failed\n");
-				exit(1);
-			}
-			while (len < size) {
-				int l = write(fd, prog, size - len);
-				if (l < 0) {
-					error("write error");
-					exit(1);
-				}
-				len += l;
-			}
-			close(fd);
-			free(prog);
-			exit(0);
+			boot_usb_cmd_read(addr, size, argv[4]);
+
 		} else if (!strcmp(argv[1], "flash")) {
 			u_int32_t addr;
 
@@ -633,29 +756,8 @@ int main(int argc, char *argv[])
 				}
 			}
 
-			if ((fd = open(argv[3], O_RDONLY)) < 0) {
-				error("%s", strerror(errno));
-				exit(1);
-			}
-			if (fstat(fd, &st) < 0) {
-				error("%s", strerror(errno));
-				exit(1);
-			}
-			if ((addr + st.st_size) > 0x4000000 || addr % 0x20000) {
-				error("invalid flash file/address");
-				exit(1);
-			}
-			if (!(prog = mmap(NULL, st.st_size, PROT_READ, MAP_SHARED, fd, 0))) {
-				error("mmap error: %s", strerror(errno));
-				exit(1);
-			}
-			if (ezx_blob_flash_program(addr, prog, st.st_size) < 0) {
-				error("flash failed");
-				exit(1);
-			}
-			munmap(prog, st.st_size);
-			close(fd);
-			exit(0);
+			boot_usb_cmd_flash(addr, argv[3]);
+
 		} else if (!strcmp(argv[1], "write")) {
 			u_int32_t addr;
 
@@ -672,34 +774,11 @@ int main(int argc, char *argv[])
 			if (sscanf(argv[2], "0x%x", &addr) != 1)
 				addr = atoi(argv[2]);
 
-			if ((fd = open(argv[3], O_RDONLY)) < 0) {
-				error("%s", strerror(errno));
-				exit(1);
-			}
-			if (fstat(fd, &st) < 0) {
-				error("%s", strerror(errno));
-				exit(1);
-			}
-			if (addr < 0xA0000000 || addr % 0x8 ||
-					(addr + st.st_size) > 0xA400000) {
-				error("invalid RAM address");
-				exit(1);
-			}
-			if (!(prog = mmap(NULL, st.st_size, PROT_READ, MAP_SHARED, fd, 0))) {
-				error("mmap error: %s", strerror(errno));
-				exit(1);
-			}
-			if (ezx_blob_load_program(0xbeef, addr, prog,
-							st.st_size, 1) < 0) {
-				error("upload failed");
-				exit(1);
-			}
-			munmap(prog, st.st_size);
-			close(fd);
-			exit(0);
+			boot_usb_cmd_write(addr, argv[3]);
+
 		} else if (!strcmp(argv[1], "off")) {
-			ezx_blob_send_command("POWER_DOWN", NULL, 0, NULL);
-			exit(0);
+			boot_usb_cmd_off();
+
 		} else if (!strcmp(argv[1], "jump")) {
 			u_int32_t addr;
 
@@ -715,33 +794,17 @@ int main(int argc, char *argv[])
 			}
 			if (sscanf(argv[2], "0x%x", &addr) != 1)
 				addr = atoi(argv[2]);
-			if (addr < 0xa0000000 || addr > 0xa2000000 || addr % 8) {
-				error("invalid addr");
-				exit(1);
-			}
-			if (ezx_blob_cmd_jump(addr) < 0) {
-				error("jump failed");
-				exit(1);
-			}
-			exit(0);
+
+			boot_usb_cmd_jump(addr);
 		}
 	}
 	if (!strcmp(argv[1], "setflag")) {
-		unsigned int flag = 0;
-		if (!strcmp(argv[2], "usb"))
-			flag = 0x0D3ADCA7;
-		else if (!strcmp(argv[2], "dumpkeys"))
-			flag = 0x1EE7F1A6;
-		if (flag) {
-			if (ezx_blob_load_program(phone.product_id, 0xa1000000, (char *)&flag, 4, 1) < 0) {
-				error("flag send failed");
-				exit(1);
-			}
-			exit(0);
-		} else {
+		if (argc != 3) {
 			printf("usage: %s setflag usb|dumpkeys\n", argv[0]);
 			exit(1);
 		}
+
+		boot_usb_cmd_setflag(argv[2]);
 	}
 
 	if ((fd = open(argv[1], O_RDONLY)) < 0) {
