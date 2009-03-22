@@ -177,11 +177,11 @@ static void ezx_device_open()
 	dev = find_ezx_device();
 	if (!dev) {
 		error("cannot find known EZX device in bootloader mode");
-		goto exit;
+		exit(1);
 	}
 	if (!(hdl = usb_open(dev))) {
 		error("open usb device: %s", usb_strerror());
-		goto exit;
+		exit(1);
 	}
 
 	/* Remember to close the device at exit */
@@ -189,13 +189,8 @@ static void ezx_device_open()
 
 	if (usb_claim_interface(hdl, 0) < 0) {
 		error("claim usb interface 1 of device: %s", usb_strerror());
-		goto exit;
+		exit(1);
 	}
-
-	return;
-
-exit:
-	exit(1);
 }
 
 
@@ -549,7 +544,7 @@ int main(int argc, char *argv[])
 		usage();
 
 		error("Too few arguments.");
-		goto exit;
+		exit(1);
 	}
 
 	ezx_device_open();
@@ -557,11 +552,11 @@ int main(int argc, char *argv[])
 //#ifdef DEBUG /* query information only if debugging */
 	if (ezx_blob_send_command("RQSN", NULL, 0, NULL) < 0) {
 		error("RQSN");
-		goto exit;
+		exit(1);
 	}
 	if (ezx_blob_send_command("RQVN", NULL, 0, NULL) < 0) {
 		error("RQVN");
-		goto exit;
+		exit(1);
 	}
 //#endif
 	if (phone.product_id == 0xbeef) {
@@ -579,11 +574,11 @@ int main(int argc, char *argv[])
 			fd = open(argv[4], O_CREAT | O_WRONLY, 0644);
 			if (fd < 0 || fstat(fd, &st) < 0) {
 				error("%s: %s", argv[4], strerror(errno));
-				goto exit;
+				exit(1);
 			}
 			if (!is_valid_addr(argv[2]) || !is_valid_addr(argv[3])) {
 				error("invalid argument");
-				goto exit;
+				exit(1);
 			}
 			if ((sscanf(argv[3], "0x%x", &size) != 1))
 				size = atoi(argv[3]);
@@ -592,22 +587,22 @@ int main(int argc, char *argv[])
 
 			if (size < 8 || size % 8 || addr < 0 || addr % 8) {
 				error("invalid parameter %d %d", addr, size);
-				goto exit;
+				exit(1);
 			}
 			info("Downloading:     ");
 			if ((prog = malloc(size)) == NULL) {
 				error("failed to alloc memory");
-				goto exit;
+				exit(1);
 			}
 			if (ezx_blob_dload_program(addr, prog, size, 1)) {
 				error("download failed\n");
-				goto exit;
+				exit(1);
 			}
 			while (len < size) {
 				int l = write(fd, prog, size - len);
 				if (l < 0) {
 					error("write error");
-					goto exit;
+					exit(1);
 				}
 				len += l;
 			}
@@ -625,7 +620,7 @@ int main(int argc, char *argv[])
 
 			if (!is_valid_addr(argv[2])) {
 				error("invalid argument (%s)", argv[2]);
-				goto exit;
+				exit(1);
 			}
 			if (sscanf(argv[2], "0x%x", &addr) != 1)
 				addr = atoi(argv[2]);
@@ -640,23 +635,23 @@ int main(int argc, char *argv[])
 
 			if ((fd = open(argv[3], O_RDONLY)) < 0) {
 				error("%s", strerror(errno));
-				goto exit;
+				exit(1);
 			}
 			if (fstat(fd, &st) < 0) {
 				error("%s", strerror(errno));
-				goto exit;
+				exit(1);
 			}
 			if ((addr + st.st_size) > 0x4000000 || addr % 0x20000) {
 				error("invalid flash file/address");
-				goto exit;
+				exit(1);
 			}
 			if (!(prog = mmap(NULL, st.st_size, PROT_READ, MAP_SHARED, fd, 0))) {
 				error("mmap error: %s", strerror(errno));
-				goto exit;
+				exit(1);
 			}
 			if (ezx_blob_flash_program(addr, prog, st.st_size) < 0) {
 				error("flash failed");
-				goto exit;
+				exit(1);
 			}
 			munmap(prog, st.st_size);
 			close(fd);
@@ -672,32 +667,32 @@ int main(int argc, char *argv[])
 
 			if (!is_valid_addr(argv[2])) {
 				error("invalid argument (%s)", argv[2]);
-				goto exit;
+				exit(1);
 			}
 			if (sscanf(argv[2], "0x%x", &addr) != 1)
 				addr = atoi(argv[2]);
 
 			if ((fd = open(argv[3], O_RDONLY)) < 0) {
 				error("%s", strerror(errno));
-				goto exit;
+				exit(1);
 			}
 			if (fstat(fd, &st) < 0) {
 				error("%s", strerror(errno));
-				goto exit;
+				exit(1);
 			}
 			if (addr < 0xA0000000 || addr % 0x8 ||
 					(addr + st.st_size) > 0xA400000) {
 				error("invalid RAM address");
-				goto exit;
+				exit(1);
 			}
 			if (!(prog = mmap(NULL, st.st_size, PROT_READ, MAP_SHARED, fd, 0))) {
 				error("mmap error: %s", strerror(errno));
-				goto exit;
+				exit(1);
 			}
 			if (ezx_blob_load_program(0xbeef, addr, prog,
 							st.st_size, 1) < 0) {
 				error("upload failed");
-				goto exit;
+				exit(1);
 			}
 			munmap(prog, st.st_size);
 			close(fd);
@@ -716,17 +711,17 @@ int main(int argc, char *argv[])
 
 			if (!is_valid_addr(argv[2])) {
 				error("invalid argument (%s)", argv[2]);
-				goto exit;
+				exit(1);
 			}
 			if (sscanf(argv[2], "0x%x", &addr) != 1)
 				addr = atoi(argv[2]);
 			if (addr < 0xa0000000 || addr > 0xa2000000 || addr % 8) {
 				error("invalid addr");
-				goto exit;
+				exit(1);
 			}
 			if (ezx_blob_cmd_jump(addr) < 0) {
 				error("jump failed");
-				goto exit;
+				exit(1);
 			}
 			exit(0);
 		}
@@ -740,7 +735,7 @@ int main(int argc, char *argv[])
 		if (flag) {
 			if (ezx_blob_load_program(phone.product_id, 0xa1000000, (char *)&flag, 4, 1) < 0) {
 				error("flag send failed");
-				goto exit;
+				exit(1);
 			}
 			exit(0);
 		} else {
@@ -751,16 +746,16 @@ int main(int argc, char *argv[])
 
 	if ((fd = open(argv[1], O_RDONLY)) < 0) {
 		error("%s: %s", argv[1], strerror(errno));
-		goto exit;
+		exit(1);
 	}
 	if (fstat(fd, &st) < 0) {
 		error("%s: %s", argv[1], strerror(errno));
-		goto exit;
+		exit(1);
 	}
 	/* mmap kernel image passed as parameter */
 	if (!(prog = mmap(NULL, st.st_size, PROT_READ, MAP_SHARED, fd, 0))) {
 		error("mmap error: %s", strerror(errno));
-		goto exit;
+		exit(1);
 	}
 
 	if (argc >= 3)
@@ -770,7 +765,7 @@ int main(int argc, char *argv[])
 		info("Sending mach id code %d:     ", mach_id);
 		if ((asm_code = malloc(CHUNK_SIZE)) == NULL) {
 			error("failed to alloc memory");
-			goto exit;
+			exit(1);
 		}
 		memset(asm_code, 0, sizeof(asm_code));
 		memcpy(asm_code, phone.code, phone.code_size);
@@ -778,7 +773,7 @@ int main(int argc, char *argv[])
 
 		if (ezx_blob_load_program(phone.product_id, phone.kernel_addr, asm_code, CHUNK_SIZE, 1) < 0) {
 			error("asm code send failed");
-			goto exit;
+			exit(1);
 		}
 		k_offset += 4096;
 	}
@@ -786,7 +781,7 @@ int main(int argc, char *argv[])
 	info("Uploading kernel:     ");
 	if (ezx_blob_load_program(phone.product_id, phone.kernel_addr + k_offset, prog, st.st_size, 1) < 0) {
 		error("kernel upload failed");
-		goto exit;
+		exit(1);
 	}
 
 	munmap(prog, st.st_size);
@@ -819,7 +814,7 @@ int main(int argc, char *argv[])
 
 	if (!(tag = malloc(tagsize))) {
 		error("cannot alloc %d bytes for params", tagsize);
-		goto exit;
+		exit(1);
 	}
 	first_tag = tag;
 
@@ -857,16 +852,16 @@ int main(int argc, char *argv[])
 	fd = open(argv[4], O_RDONLY);
 	if (fd < 0 || fstat(fd, &st) < 0) {
 		error("%s: %s", argv[4], strerror(errno));
-		goto exit;
+		exit(1);
 	}
 	if (!(prog = mmap(NULL, st.st_size, PROT_READ, MAP_SHARED, fd, 0))) {
 		error("mmap error: %s", strerror(errno));
-		goto exit;
+		exit(1);
 	}
 	info("Uploading initrd:     ");
 	if (ezx_blob_load_program(phone.product_id, phone.initrd_addr, prog, st.st_size, 1) < 0) {
 		error("initrd upload failed");
-		goto exit;
+		exit(1);
 	}
 
 	tag = tag_next(tag);
@@ -885,17 +880,14 @@ send_params:
 	info ("Uploading params:     ");
 	if (ezx_blob_load_program(phone.product_id, phone.params_addr, (void *) first_tag, tagsize, 1) < 0) {
 		error("params upload failed");
-		goto exit;
+		exit(1);
 	}
 run_kernel:
 	info("Calling the kernel...\n");
 	if (ezx_blob_cmd_jump(phone.kernel_addr) < 0) {
 		error("kernel jump failed");
-		goto exit;
+		exit(1);
 	}
 	info("DONE\n");
 	exit(0);
-
-exit:
-	exit(1);
 }
