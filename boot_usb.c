@@ -42,18 +42,25 @@
 
 //#define DEBUG
 
-#define info(...) \
-	printf(__VA_ARGS__); fflush(stdout)
+#define info(...) do {\
+		printf(__VA_ARGS__); \
+		fflush(stdout); \
+	} while(0)
 
-static char serror[1024];
-#define error(...) \
-	sprintf(serror, __VA_ARGS__)
+#define error(...) do {\
+		fprintf(stderr, "FAILED: " __VA_ARGS__); \
+		fprintf(stderr, "\n"); \
+		fflush(stderr); \
+	} while(0)
 
 #ifdef DEBUG
-#define dbg(format, ...) \
-	printf(format "\n", ## __VA_ARGS__)
+#define dbg(...) do {\
+		printf(__VA_ARGS__); \
+		printf("\n"); \
+		fflush(stdout); \
+	} while(0)
 #else
-#define dbg(format, ...)
+#define dbg(...)
 #endif
 
 #ifdef DEBUG
@@ -188,7 +195,6 @@ static void ezx_device_open()
 	return;
 
 exit:
-	info("ezx_device_open FAILED: %s\n", serror);
 	exit(1);
 }
 
@@ -493,6 +499,40 @@ static int is_valid_addr(char *addr)
 	return 1;
 }
 
+static void usage()
+{
+	info("upload a kernel:\n"
+	     "   boot_usb <kernel> [machid] [cmdline] [initrd]\n\n"
+	     "gen-blob specific commands:\n"
+	     "   boot_usb read <addr> <size> <file>\t"
+	     "read memory contents (ram or flash)\n"
+	     "   boot_usb write <addr> <file>\t\t"
+	     "write to RAM memory\n"
+	     "   boot_usb flash <addr> <file>\t\t"
+	     "write to flash memory\n"
+	     "   boot_usb jump <addr>\t\t\t"
+	     "execute code at ram address\n"
+	     "   boot_usb setflag usb|dumpkeys\t"
+	     "set memory flag for gen-blob\n"
+	     "   boot_usb off\t\t\t\t"
+	     "power off the phone\n\n");
+
+	info("upload a kernel:\n"
+	     "You can use hexadecimal and decimal "
+	     "for <addr> and <size> arguments,\n"
+	     "for hexadecimal you need the '0x' prefix, just like in C.\n");
+
+	info("\nmachid table:\n"
+	     "\t   0\tdon't setup a mach id\n"
+	     "\t 867\told EZX mach id (default)\n"
+	     "\t1740\tA780\n"
+	     "\t1741\tE680\n"
+	     "\t1742\tA1200\n"
+	     "\t1743\tE6\n"
+	     "\t1744\tE2\n"
+	     "\t1745\tA910\n\n");
+}
+
 int main(int argc, char *argv[])
 {
 	char *prog;
@@ -506,43 +546,13 @@ int main(int argc, char *argv[])
 	int mach_id = 867; /* 867 is the old EZX mach id */
 
 	if (argc < 2) {
-		info("upload a kernel:\n"
-		     "   boot_usb <kernel> [machid] [cmdline] [initrd]\n\n"
-		     "gen-blob specific commands:\n"
-		     "   boot_usb read <addr> <size> <file>\t"
-		     "read memory contents (ram or flash)\n"
-		     "   boot_usb write <addr> <file>\t"
-		     "write to RAM memory\n"
-		     "   boot_usb flash <addr> <file>\t\t"
-		     "write to flash memory\n"
-		     "   boot_usb jump <addr>\t\t\t"
-		     "execute code at ram address\n"
-		     "   boot_usb setflag usb|dumpkeys\t\t"
-		     "set memmory flag for gen-blob\n"
-		     "   boot_usb off\t\t\t\t"
-		     "power off the phone\n\n");
-		info("upload a kernel:\n"
-		     "You can use hexadecimal and decimal for <addr> and\n"
-		     "<size> arguments, for hexadecimal you need the '0x'\n"
-		     "prefix, just like in C.\n");
-
-		info("\nmachid table:\n"
-		     "\t   0\tdon't setup a mach id\n"
-		     "\t 867\told EZX mach id (default)\n"
-		     "\t1740\tA780\n"
-		     "\t1741\tE680\n"
-		     "\t1742\tA1200\n"
-		     "\t1743\tE6\n"
-		     "\t1744\tE2\n"
-		     "\t1745\tA910\n\n");
+		usage();
 
 		error("Too few arguments.");
 		goto exit;
 	}
 
-
 	ezx_device_open();
-
 
 //#ifdef DEBUG /* query information only if debugging */
 	if (ezx_blob_send_command("RQSN", NULL, 0, NULL) < 0) {
@@ -887,6 +897,5 @@ run_kernel:
 	exit(0);
 
 exit:
-	info("FAILED: %s\n", serror);
 	exit(1);
 }
