@@ -106,7 +106,7 @@ struct phonetype {
 
 #define EZX_VENDOR_ID 0x22b8
 struct phonetype phonetypes[] = {
-{ "A780/E680",        0x6003, 0x02, 0x81, 0xa0200000, 0xa0400000, 0xa0000100, pxa_code, pxa_code_s },
+{ "A780/E680",        0x6003, 0x02, 0x81, 0xa0300000, 0xa0400000, 0xa0000100, pxa_code, pxa_code_s },
 { "Generic Blob",     0xbeef, 0x02, 0x81, 0xa0200000, 0xa0400000, 0xa0000100, pxa_code, pxa_code_s }, /* pxa_code is temporary here */
 { "A780/E680 Blob2",  0x6021, 0x02, 0x81, 0xa0300000, 0xa0400000, 0xa0000100, pxa_code, pxa_code_s },
 { "E2/A1200/E6/A910", 0x6023, 0x01, 0x82, 0xa0de0000, /*FIXME*/0, /*FIXME*/0, pxa_code, pxa_code_s },
@@ -830,7 +830,7 @@ int main(int argc, char *argv[])
 			error("failed to alloc memory");
 			exit(1);
 		}
-		memset(asm_code, 0, sizeof(asm_code));
+		memset(asm_code, 0, CHUNK_SIZE);
 		memcpy(asm_code, phone.code, phone.code_size);
 		*(u_int32_t *)(asm_code + phone.code_size) = mach_id;
 
@@ -838,7 +838,7 @@ int main(int argc, char *argv[])
 			error("asm code send failed");
 			exit(1);
 		}
-		k_offset += 4096;
+		k_offset += CHUNK_SIZE;
 	}
 
 	info("Uploading kernel:     ");
