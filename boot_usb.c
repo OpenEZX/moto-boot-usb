@@ -691,6 +691,8 @@ int main(int argc, char *argv[])
 	int k_offset = 0;
 	int mach_id = 867; /* 867 is the old EZX mach id */
 
+	printf("%s r%s %s\n", argv[0], "$Revision$", "$Date$");
+
 	if (argc < 2) {
 		usage();
 
