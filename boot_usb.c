@@ -543,7 +543,7 @@ static void boot_usb_cmd_read(u_int32_t addr, u_int32_t size, const char *outfil
 		exit(1);
 	}
 
-	if (size < 8 || size % 8 || addr < 0 || addr % 8) {
+	if (size < 8 || size % 8 || addr % 8) {
 		error("invalid parameter %d %d", addr, size);
 		exit(1);
 	}
