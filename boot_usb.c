@@ -325,7 +325,7 @@ static int ezx_blob_cmd_rbin(u_int32_t addr, u_int16_t size, char *response)
 		return err;
 
 	csum = 0;
-	data = reply + 6;
+	data = (u_int8_t *) reply + 6;
 	for (i = 0; i < size; i++) {
 		response[i] = data[i];
 		csum += data[i];
