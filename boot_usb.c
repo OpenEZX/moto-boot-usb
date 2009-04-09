@@ -204,7 +204,7 @@ static int ezx_blob_recv_reply(char *b)
 
 	memset(buf, 0, sizeof(buf));
 
-	ret = usb_bulk_read(hdl, phone.in_ep, buf, sizeof(buf), 0);
+	ret = usb_bulk_read(hdl, phone.in_ep, buf, sizeof(buf), USB_TIMEOUT);
 
 	dbg("RX: %s", hexdump(buf, ret));
 
@@ -244,7 +244,7 @@ static int ezx_blob_send_command(const char *command, char *payload, int len, ch
 		dbg("TX: %s (%s)", buf, hexdump(buf, cur));
 #endif
 
-	ret = usb_bulk_write(hdl, phone.out_ep, buf, cur, 0);
+	ret = usb_bulk_write(hdl, phone.out_ep, buf, cur, USB_TIMEOUT);
 	if (ret < 0)
 		return ret;
 
