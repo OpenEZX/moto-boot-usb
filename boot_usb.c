@@ -552,7 +552,7 @@ static void boot_usb_cmd_read(u_int32_t addr, u_int32_t size, const char *outfil
 		error("failed to alloc memory");
 		exit(1);
 	}
-	if (ezx_blob_dload_program(addr, prog, size, 1)) {
+	if (ezx_blob_dload_program(addr, prog, size, 1) < 0) {
 		error("download failed\n");
 		exit(1);
 	}
