@@ -42,10 +42,14 @@
 
 //#define DEBUG
 
+#ifndef DEBUG
 #define info(...) do {\
 		printf(__VA_ARGS__); \
 		fflush(stdout); \
 	} while(0)
+#else
+#define info(...)
+#endif
 
 #define error(...) do {\
 		fprintf(stderr, "FAILED: " __VA_ARGS__); \
@@ -206,7 +210,7 @@ static int ezx_blob_recv_reply(char *b)
 
 	ret = usb_bulk_read(hdl, phone.in_ep, buf, sizeof(buf), USB_TIMEOUT);
 
-	dbg("RX: %s", hexdump(buf, ret));
+	dbg("RX(%d): %s\n", ret, hexdump(buf, ret));
 
 	if (b)
 		memcpy(b, buf, 8192);
@@ -219,7 +223,7 @@ static int ezx_blob_recv_reply(char *b)
 
 static int ezx_blob_send_command(const char *command, char *payload, int len, char *reply)
 {
-	char buf[8192];
+	char buf[9000];
 	int cmdlen = strlen(command);
 	int cur = 0;
 	int ret;
@@ -237,12 +241,7 @@ static int ezx_blob_send_command(const char *command, char *payload, int len, ch
 	}
 	buf[cur++] = ETX;
 
-#ifdef DEBUG
-	if (!strcasecmp(command, "bin"))
-		dbg("TX: %u bytes", cur);
-	else
-		dbg("TX: %s (%s)", buf, hexdump(buf, cur));
-#endif
+	dbg("TX(%d): %s\n", cur, hexdump(buf, cur));
 
 	ret = usb_bulk_write(hdl, phone.out_ep, buf, cur, USB_TIMEOUT);
 	if (ret < 0)
@@ -512,8 +511,7 @@ static void usage()
 	     "   boot_usb off\t\t\t\t"
 	     "power off the phone\n\n");
 
-	info("upload a kernel:\n"
-	     "You can use hexadecimal and decimal "
+	info("You can use hexadecimal and decimal "
 	     "for <addr> and <size> arguments,\n"
 	     "for hexadecimal you need the '0x' prefix, just like in C.\n");
 
