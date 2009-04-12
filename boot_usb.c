@@ -132,7 +132,7 @@ struct phonetype phone = { "Unknown", 0, 0, 0, 0, 0, 0, NULL, 0 };
 
 /* usb handling */
 
-#define USB_TIMEOUT 5000
+#define USB_TIMEOUT 50000
 static struct usb_dev_handle *hdl = NULL;
 
 static struct usb_device *find_ezx_device(void)
