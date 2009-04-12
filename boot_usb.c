@@ -48,7 +48,7 @@
 		fflush(stdout); \
 	} while(0)
 #else
-#define info(...)
+#define info(...) do {} while(0)
 #endif
 
 #define error(...) do {\
@@ -64,17 +64,21 @@
 		fflush(stdout); \
 	} while(0)
 #else
-#define dbg(...)
+#define dbg(...) do {} while(0)
 #endif
 
 #ifdef DEBUG
-const char *hexdump(const void *data, unsigned int len)
+const char *hexdump(const void *data, int len)
 {
 	static char string[65535];
 	unsigned char *d = (unsigned char *)data;
-	unsigned int i, left;
+	int i, left;
 
 	string[0] = '\0';
+
+	if (len < 0)
+		return string;
+
 	left = sizeof(string);
 	for (i = 0; len--; i += 3) {
 		if (i >= sizeof(string) - 4)
@@ -211,6 +215,9 @@ static int ezx_blob_recv_reply(char *b)
 	ret = usb_bulk_read(hdl, phone.in_ep, buf, sizeof(buf), USB_TIMEOUT);
 
 	dbg("RX(%d): %s\n", ret, hexdump(buf, ret));
+
+	if (ret < 0)
+		return ret;
 
 	if (b)
 		memcpy(b, buf, 8192);
@@ -552,6 +559,8 @@ static void boot_usb_cmd_read(u_int32_t addr, u_int32_t size, const char *outfil
 	}
 	if (ezx_blob_dload_program(addr, prog, size, 1) < 0) {
 		error("download failed\n");
+		close(fd);
+		free(prog);
 		exit(1);
 	}
 	while (len < size) {
@@ -594,6 +603,8 @@ static void boot_usb_cmd_flash(u_int32_t addr, const char *infilename)
 	}
 	if (ezx_blob_flash_program(addr, prog, st.st_size) < 0) {
 		error("flash failed");
+		munmap(prog, st.st_size);
+		close(fd);
 		exit(1);
 	}
 
@@ -630,8 +641,11 @@ static void boot_usb_cmd_write(u_int32_t addr, const char *infilename)
 	if (ezx_blob_load_program(0xbeef, addr, prog,
 					st.st_size, 1) < 0) {
 		error("upload failed");
+		munmap(prog, st.st_size);
+		close(fd);
 		exit(1);
 	}
+
 	munmap(prog, st.st_size);
 	close(fd);
 	exit(0);
