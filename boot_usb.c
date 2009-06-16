@@ -394,13 +394,13 @@ static int ezx_blob_dload_program(u_int32_t addr, char *data, int size, int v)
 		if ((err = ezx_blob_cmd_rbin(cur_addr, remain, cur_data)) < 0)
 			break;
 		if (v)
-			info("\b\b\b%02d%%",
-			     (int)((100 * (cur_data - data)) / size));
+			info("\rDownloading: %.1f%%",
+				(100 * (float)(cur_data - data)) / size);
 	}
 	if (err < 0)
 		return err;
 	if (v)
-		info("\b\b\b\b100%% OK\n");
+		info("\rDownloading: 100%% OK\n");
 
 	return 0;
 }
@@ -430,13 +430,13 @@ static int ezx_blob_load_program(u_int16_t phone_id, u_int32_t addr, char *data,
 		if ((err = ezx_blob_cmd_bin(cur_data, remain)) < 0)
 			break;
 		if (v)
-			info("\b\b\b%02d%%",
-			     (int)((100 * (cur_data - data)) / size));
+			info("\rUploading: %.1f%%",
+				(100 * (float)(cur_data - data)) / size);
 	}
 	if (err < 0)
 		return err;
 	if (v)
-		info("\b\b\b\b100%% OK\n");
+		info("\rUploading: 100%% OK\n");
 	return 0;
 }
 
@@ -552,7 +552,6 @@ static void boot_usb_cmd_read(u_int32_t addr, u_int32_t size, const char *outfil
 		error("invalid parameter %d %d", addr, size);
 		exit(1);
 	}
-	info("Downloading:     ");
 	if ((prog = malloc(size)) == NULL) {
 		error("failed to alloc memory");
 		exit(1);
@@ -839,7 +838,7 @@ int main(int argc, char *argv[])
 		mach_id = atoi(argv[2]);
 
 	if (phone.code_size > 0 && mach_id > 0) {
-		info("Sending mach id code %d:     ", mach_id);
+		info("Sending mach id code %d\n", mach_id);
 		if ((asm_code = malloc(CHUNK_SIZE)) == NULL) {
 			error("failed to alloc memory");
 			exit(1);
@@ -855,7 +854,7 @@ int main(int argc, char *argv[])
 		k_offset += CHUNK_SIZE;
 	}
 
-	info("Uploading kernel:     ");
+	info("Sending kernel\n");
 	if (ezx_blob_load_program(phone.product_id, phone.kernel_addr + k_offset, prog, st.st_size, 1) < 0) {
 		error("kernel upload failed");
 		exit(1);
@@ -935,7 +934,7 @@ int main(int argc, char *argv[])
 		error("mmap error: %s", strerror(errno));
 		exit(1);
 	}
-	info("Uploading initrd:     ");
+	info("Sending initrd\n");
 	if (ezx_blob_load_program(phone.product_id, phone.initrd_addr, prog, st.st_size, 1) < 0) {
 		error("initrd upload failed");
 		exit(1);
@@ -954,7 +953,7 @@ send_params:
 	tag = tag_next(tag);
 	tag->hdr.tag = ATAG_NONE;
 	tag->hdr.size = 0;
-	info ("Uploading params:     ");
+	info("Sending params\n");
 	if (ezx_blob_load_program(phone.product_id, phone.params_addr, (void *) first_tag, tagsize, 1) < 0) {
 		error("params upload failed");
 		exit(1);
