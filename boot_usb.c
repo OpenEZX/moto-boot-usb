@@ -23,6 +23,9 @@
  *
  */
 
+/* for usleep() */
+#define _BSD_SOURCE
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -39,6 +42,8 @@
 #include <usb.h>
 
 #include <asm/setup.h> /* for boot_params */
+
+//#define USECS_SLEEP 500
 
 //#define DEBUG
 
@@ -258,9 +263,9 @@ static int ezx_blob_send_command(const char *command, char *payload, int len, ch
 	 * apparently some race condition in the bootloader if we feed
 	 * data too fast
 	 */
-	/*
-	usleep(USB_TIMEOUT);
-	*/
+#ifdef USECS_SLEEP
+	usleep(USECS_SLEEP);
+#endif
 
 	return ezx_blob_recv_reply(reply);
 }
