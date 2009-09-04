@@ -402,8 +402,11 @@ static int ezx_blob_dload_program(u_int32_t addr, char *data, int size, int v)
 			info("\rDownloading: %.1f%%",
 				(100 * (float)(cur_data - data)) / size);
 	}
-	if (err < 0)
+	if (err < 0) {
+		if (v)
+			info("\n");
 		return err;
+	}
 	if (v)
 		info("\rDownloading: 100%% OK\n");
 
