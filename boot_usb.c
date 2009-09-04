@@ -544,6 +544,7 @@ static void boot_usb_cmd_read(u_int32_t addr, u_int32_t size, const char *outfil
 {
 	char *prog;
 	int fd;
+	int ret = 0;
 	struct stat st;
 	unsigned int len = 0;
 
@@ -561,12 +562,12 @@ static void boot_usb_cmd_read(u_int32_t addr, u_int32_t size, const char *outfil
 		error("failed to alloc memory");
 		exit(1);
 	}
-	if (ezx_blob_dload_program(addr, prog, size, 1) < 0) {
+	
+	ret = ezx_blob_dload_program(addr, prog, size, 1);
+	if (ret < 0)
 		error("download failed\n");
-		close(fd);
-		free(prog);
-		exit(1);
-	}
+
+	/* write out the data even on FAILURE */
 	while (len < size) {
 		int l = write(fd, prog, size - len);
 		if (l < 0) {
@@ -578,7 +579,7 @@ static void boot_usb_cmd_read(u_int32_t addr, u_int32_t size, const char *outfil
 
 	close(fd);
 	free(prog);
-	exit(0);
+	exit(ret);
 }
 
 static void boot_usb_cmd_flash(u_int32_t addr, const char *infilename)
