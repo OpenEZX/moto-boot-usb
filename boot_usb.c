@@ -521,7 +521,7 @@ static void usage()
 	     "write to flash memory\n"
 	     "   boot_usb jump <addr>\t\t\t"
 	     "execute code at ram address\n"
-	     "   boot_usb setflag usb|dumpkeys\t"
+	     "   boot_usb setflag usb|dumpkeys|passthrough\t"
 	     "set memory flag for gen-blob\n"
 	     "   boot_usb off\t\t\t\t"
 	     "power off the phone\n\n");
@@ -681,21 +681,29 @@ static void boot_usb_cmd_jump(u_int32_t addr)
 static void boot_usb_cmd_setflag(const char *flagname)
 {
 	unsigned int flag = 0;
+	/* flag address used by gen-blob */
+	unsigned int addr = 0xa1000000;
 
 	if (!strcmp(flagname, "usb"))
 		flag = 0x0D3ADCA7;
 	else if (!strcmp(flagname, "dumpkeys"))
 		flag = 0x1EE7F1A6;
+	else if (!strcmp(flagname, "passthrough")) {
+		flag = 0x12345678;
+		/* PASS_THRU_FLAG_ADDR used by original blob */
+		addr = 0xa0000000;
+	}
 	else {
-		error("unknown flag name '%s', use either usb or dumpkeys",
+		error("unknown flag name '%s', use either usb, dumpkeys or passthrough",
 				flagname);
 		exit(1);
 	}
 
-	if (ezx_blob_load_program(phone.product_id, 0xa1000000, (char *)&flag, 4, 1) < 0) {
+	if (ezx_blob_load_program(phone.product_id, addr, (char *)&flag, 4, 1) < 0) {
 		error("flag send failed");
 		exit(1);
 	}
+
 	exit(0);
 }
 
@@ -822,7 +830,7 @@ int main(int argc, char *argv[])
 	}
 	if (!strcmp(argv[1], "setflag")) {
 		if (argc != 3) {
-			printf("usage: %s setflag usb|dumpkeys\n", argv[0]);
+			printf("usage: %s setflag usb|dumpkeys|passthrough\n", argv[0]);
 			exit(1);
 		}
 
