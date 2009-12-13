@@ -227,8 +227,22 @@ static int ezx_blob_recv_reply(char *b)
 	if (b)
 		memcpy(b, buf, 8192);
 
-	if (buf[1] == 0x45 && buf[2] == 0x52 && buf[3] == 0x52)
-		ret = -buf[5];
+	/*
+	 * In case of error, the bootloader will do something like this:
+	 *
+	 *    static const u8 errStr[] = "ERR";
+	 *    u8 error_code_str[2];
+	 *
+	 *    error_code_str[0] = error_code;
+	 *    error_code_str[1] = NUL;
+	 *    parse_send_packet((u8 *) errStr, error_code_str, 1);
+	 *
+	 * And the packet will be:
+	 *    STX, 'E', 'R', 'R', RS, error_code, NULL, ETX, NULL
+	 * with error code of type u8.
+	 */
+	if (buf[1] == 'E' && buf[2] == 'R' && buf[3] == 'R')
+		ret = -((uint8_t) buf[5]);
 
 	return ret;
 }
@@ -718,6 +732,7 @@ int main(int argc, char *argv[])
 	char *asm_code;
 	int k_offset = 0;
 	int mach_id = 867; /* 867 is the old EZX mach id */
+	int ret;
 
 	printf("%s\n", "$Id$");
 
@@ -730,16 +745,19 @@ int main(int argc, char *argv[])
 
 	ezx_device_open();
 
-//#ifdef DEBUG /* query information only if debugging */
-	if (ezx_blob_send_command("RQSN", NULL, 0, NULL) < 0) {
-		error("RQSN");
+#ifdef DEBUG /* query information only if debugging */
+	ret = ezx_blob_send_command("RQSN", NULL, 0, NULL);
+	if (ret < 0) {
+		error("RQSN: %d", ret);
 		exit(1);
 	}
-	if (ezx_blob_send_command("RQVN", NULL, 0, NULL) < 0) {
-		error("RQVN");
+
+	ret = ezx_blob_send_command("RQVN", NULL, 0, NULL);
+	if (ret < 0) {
+		error("RQVN: %d", ret);
 		exit(1);
 	}
-//#endif
+#endif
 
 	if (phone.product_id == 0xbeef) {
 		if (!strcmp(argv[1], "read")) {
