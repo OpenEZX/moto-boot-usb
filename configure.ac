@@ -1,6 +1,5 @@
 AC_PREREQ(2.60)
 AC_INIT([boot_usb], [0.3], [openezx-devel@lists.openezx.org])
-AC_CONFIG_SRCDIR([boot_usb.c])
 AC_CONFIG_HEADER([config.h])
 AM_INIT_AUTOMAKE([-Wall foreign])
 
@@ -37,5 +36,5 @@ AC_EGREP_HEADER(tag_mem32, asm/setup.h,
 
 # Checks for library functions.
 
-AC_CONFIG_FILES([Makefile])
+AC_CONFIG_FILES([Makefile src/Makefile])
 AC_OUTPUT
