@@ -721,6 +721,23 @@ static void boot_usb_cmd_setflag(const char *flagname)
 	exit(0);
 }
 
+static void boot_usb_print_phone_info(void)
+{
+	int ret;
+
+	ret = ezx_blob_send_command("RQSN", NULL, 0, NULL);
+	if (ret < 0) {
+		error("RQSN: %d", ret);
+		exit(1);
+	}
+
+	ret = ezx_blob_send_command("RQVN", NULL, 0, NULL);
+	if (ret < 0) {
+		error("RQVN: %d", ret);
+		exit(1);
+	}
+}
+
 int main(int argc, char *argv[])
 {
 	char *prog;
@@ -732,7 +749,6 @@ int main(int argc, char *argv[])
 	char *asm_code;
 	int k_offset = 0;
 	int mach_id = 867; /* 867 is the old EZX mach id */
-	int ret;
 
 	printf("%s\n", "$Id$");
 
@@ -746,17 +762,7 @@ int main(int argc, char *argv[])
 	ezx_device_open();
 
 #ifdef DEBUG /* query information only if debugging */
-	ret = ezx_blob_send_command("RQSN", NULL, 0, NULL);
-	if (ret < 0) {
-		error("RQSN: %d", ret);
-		exit(1);
-	}
-
-	ret = ezx_blob_send_command("RQVN", NULL, 0, NULL);
-	if (ret < 0) {
-		error("RQVN: %d", ret);
-		exit(1);
-	}
+	boot_usb_print_phone_info();
 #endif
 
 	if (phone.product_id == 0xbeef) {
