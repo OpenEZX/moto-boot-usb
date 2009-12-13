@@ -725,21 +725,30 @@ static void boot_usb_cmd_setflag(const char *flagname)
 	exit(0);
 }
 
-static void boot_usb_print_phone_info(void)
+#define _boot_usb_query_cmd(command) do {\
+		memset(reply, 0, sizeof(reply)); \
+		ret = ezx_blob_send_command(command, NULL, 0, reply); \
+		if (ret < 0) \
+			error(command ": %d %s", ret, reply); \
+		else {\
+			info(command ": %s\n", reply); \
+		} \
+	} while (0)
+
+static void boot_usb_query_info(void)
 {
 	int ret;
+	char reply[8192];
 
-	ret = ezx_blob_send_command("RQSN", NULL, 0, NULL);
-	if (ret < 0) {
-		error("RQSN: %d", ret);
-		exit(1);
-	}
+	_boot_usb_query_cmd("RQHW");
 
-	ret = ezx_blob_send_command("RQVN", NULL, 0, NULL);
-	if (ret < 0) {
-		error("RQVN: %d", ret);
-		exit(1);
-	}
+	/* extend querying information only if debugging */
+#ifdef DEBUG
+	_boot_usb_query_cmd("RQSN");
+	_boot_usb_query_cmd("RQVN");
+	_boot_usb_query_cmd("RQCS");
+	_boot_usb_query_cmd("RQRC");
+#endif
 }
 
 int main(int argc, char *argv[])
@@ -765,9 +774,7 @@ int main(int argc, char *argv[])
 
 	ezx_device_open();
 
-#ifdef DEBUG /* query information only if debugging */
-	boot_usb_print_phone_info();
-#endif
+	boot_usb_query_info();
 
 	if (phone.product_id == 0xbeef) {
 		if (!strcmp(argv[1], "read")) {
