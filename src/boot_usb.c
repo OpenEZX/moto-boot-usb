@@ -224,9 +224,6 @@ static int ezx_blob_recv_reply(char *b)
 	if (ret < 0)
 		return ret;
 
-	if (b)
-		memcpy(b, buf, 8192);
-
 	/*
 	 * In case of error, the bootloader will do something like this:
 	 *
@@ -243,6 +240,13 @@ static int ezx_blob_recv_reply(char *b)
 	 */
 	if (buf[1] == 'E' && buf[2] == 'R' && buf[3] == 'R')
 		ret = -((uint8_t) buf[5]);
+
+	if (b) {
+		if (ret < 0)
+			memcpy(b, "ERR\0", 4);
+		else
+			memcpy(b, buf, ret);
+	}
 
 	return ret;
 }
