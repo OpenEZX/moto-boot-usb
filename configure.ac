@@ -18,7 +18,7 @@ AC_PROG_MAKE_SET
 # Checks for libraries.
 PKG_CHECK_MODULES(USB, libusb,,
 	AC_MSG_ERROR([*** Required libusb not installed ***]))
-AC_CHECK_LIB([usb], [usb_init],,,-lusb)
+AC_CHECK_LIB([usb], [usb_init], [HAVE_LIBUSB=1])
 
 # Checks for header files.
 AC_HEADER_STDC
