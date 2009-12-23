@@ -25,7 +25,7 @@
 /* taken from a780-blob source code:
  * http://svn.openezx.org/trunk/src/blob/a780-blob/
  *
- * See include/blob/bl_flash_header.h::typedef struct _FLASH_HEADER 
+ * See include/blob/bl_flash_header.h::typedef struct _FLASH_HEADER
  */
 struct hw_desc {
 	uint8_t flash_bl_hardware_descriptor_descriptor_type;
@@ -65,7 +65,7 @@ static int print_hw_desc(char *msg, struct hw_desc *desc)
  * in Motorola Boot interface Specification
  *
  * the string has this format:
- * 
+ *
  *   RSHW000D0201FF000100
  *
  * "RSHW" + 16 ascii chars (8 hex-encoded bytes)
