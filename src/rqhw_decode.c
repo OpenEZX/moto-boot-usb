@@ -131,5 +131,10 @@ int main(void)
 	if (ret == 0)
 		print_hw_desc("ROKR E2 BOOT_G_00.02.05R_SUMATRA", &desc);
 
+	/* A1200 RSHW011602FFFF008801 */
+	ret = rqhw_decode("RSHW011602FFFF008801", &desc);
+	if (ret == 0)
+		print_hw_desc("A1200 BOOT_G_00.01.89P_HAINAN", &desc);
+
 	return 0;
 }
