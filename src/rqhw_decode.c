@@ -126,5 +126,10 @@ int main(void)
 	if (ret == 0)
 		print_hw_desc("a910 new BOOT_G_00.02.45R_MARTINIQUE", &desc);
 
+	/* ROKR E2 RSHW011602FFFF000502 */
+	ret = rqhw_decode("RSHW011602FFFF000502", &desc);
+	if (ret == 0)
+		print_hw_desc("ROKR E2 BOOT_G_00.02.05R_SUMATRA", &desc);
+
 	return 0;
 }
