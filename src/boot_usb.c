@@ -543,7 +543,7 @@ static int ezx_blob_load_program(u_int16_t phone_id, u_int32_t addr, char *data,
 	return 0;
 }
 
-#define FLASH_BLOCK_SIZE	0x20000 	/* 128k */
+#define FLASH_BLOCK_SIZE	0x20000		/* 128k */
 #define MAX_FLASH_SIZE		0x80000		/* 512k */
 #define FLASH_TEMP_ADDR		0xa0400000
 
@@ -660,7 +660,7 @@ static void boot_usb_cmd_read(u_int32_t addr, u_int32_t size, const char *outfil
 		error("failed to alloc memory");
 		exit(1);
 	}
-	
+
 	ret = ezx_blob_dload_program(addr, prog, size, 1);
 	if (ret < 0)
 		error("download failed\n");
