@@ -111,6 +111,11 @@ int main(void)
 	if (ret == 0)
 		print_hw_desc("a780 european with GPS", &desc);
 
+	/* e680i RSHW000D0201FF000100 */
+	ret = rqhw_decode("RSHW000D0201FF000100", &desc);
+	if (ret == 0)
+		print_hw_desc("e680i EZX AP bootloader Version 3.0 2004-05-18 ", &desc);
+
 	/* a910 RSHW011602FFFF001502 */
 	ret = rqhw_decode("RSHW011602FFFF001502", &desc);
 	if (ret == 0)
