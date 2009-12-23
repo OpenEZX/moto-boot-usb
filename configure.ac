@@ -4,6 +4,9 @@ AC_CONFIG_SRCDIR([src/boot_usb.c])
 AC_CONFIG_HEADER([config.h])
 AM_INIT_AUTOMAKE([-Wall foreign])
 
+# Test for new silent rules
+m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
+
 AC_ARG_WITH(kernel-dir,
 	AC_HELP_STRING([--with-kernel-dir=DIR], [location of kernel sources]),
 	[KERNEL_DIR=${withval}],
