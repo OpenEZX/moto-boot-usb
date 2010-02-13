@@ -51,6 +51,22 @@ static struct phone_rshq phones[] = {
 		.rshw        = "RSHW011602FFFF008801",
 		.description = "A1200 BOOT_G_00.01.89P_HAINAN",
 	},
+	{
+		.rshw        = "RSHW01FF002C6CFFFFFF",
+		.description = "Motorola Droid",
+	},
+	{
+		.rshw        = "RSHW010C02FFFF0007D0",
+		.description = "Motorola E398 (T-Mobile edition)",
+	},
+	{
+		.rshw        = "RSHW010C02FF01000A02",
+		.description = "Motorola Rockr E1",
+	},
+	{
+		.rshw        = "RSHW00130200FF000300",
+		.description = "V360",
+	},
 };
 
 /* taken from a780-blob source code:
