@@ -81,6 +81,10 @@ static int print_hw_desc(char *msg, struct hw_desc *desc)
 			desc->flash_bl_hardware_descriptor_hw_chipset_type);
 	printf("ma_type: %u\n",
 			desc->flash_bl_hardware_descriptor_ma_type);
+	printf("growth0: %u\n",
+			desc->flash_bl_hardware_descriptor_growth0);
+	printf("growth1: %u\n",
+			desc->flash_bl_hardware_descriptor_growth1);
 	printf("product_sub_type: %u\n",
 			desc->flash_bl_hardware_descriptor_product_sub_type);
 	printf("version_number: %u\n",
