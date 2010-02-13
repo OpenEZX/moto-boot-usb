@@ -446,6 +446,7 @@ static int ezx_blob_cmd_rbin(u_int32_t addr, u_int16_t size, char *response)
 static int ezx_blob_cmd_bin(char *data, u_int16_t size)
 {
 	char buf[8192 + 2 + 1];
+	u_int16_t htons_size;
 
 	size += (size % 8) ? (8 - (size % 8)) : 0;
 
@@ -454,7 +455,8 @@ static int ezx_blob_cmd_bin(char *data, u_int16_t size)
 
 	memset(buf, 0, sizeof(buf));
 
-	*(u_int16_t *)buf = htons(size);
+	htons_size = htons(size);
+	memcpy(buf, &htons_size, 2);
 	memcpy(buf + 2, data, size);
 	buf[size + 2] = ezx_csum(data, size);
 
