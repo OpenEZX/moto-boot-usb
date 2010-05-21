@@ -665,7 +665,7 @@ static void boot_usb_cmd_read(u_int32_t addr, u_int32_t size, const char *outfil
 
 	ret = ezx_blob_dload_program(addr, prog, size, 1);
 	if (ret < 0)
-		error("download failed\n");
+		error("download failed: %s", bl_err_mess(-ret));
 
 	/* write out the data even on FAILURE */
 	while (len < size) {
@@ -687,6 +687,7 @@ static void boot_usb_cmd_flash(u_int32_t addr, const char *infilename)
 	char *prog;
 	int fd;
 	struct stat st;
+	int ret;
 
 	fd = open(infilename, O_RDONLY);
 	if (fd < 0) {
@@ -706,8 +707,10 @@ static void boot_usb_cmd_flash(u_int32_t addr, const char *infilename)
 		error("mmap error: %s", strerror(errno));
 		exit(1);
 	}
-	if (ezx_blob_flash_program(addr, prog, st.st_size) < 0) {
-		error("flash failed");
+	
+	ret = ezx_blob_flash_program(addr, prog, st.st_size);
+	if (ret < 0) {
+		error("flash failed: %s", bl_err_mess(-ret));
 		munmap(prog, st.st_size);
 		close(fd);
 		exit(1);
@@ -723,6 +726,7 @@ static void boot_usb_cmd_write(u_int32_t addr, const char *infilename)
 	char *prog;
 	int fd;
 	struct stat st;
+	int ret;
 
 	fd = open(infilename, O_RDONLY);
 	if (fd < 0) {
@@ -743,9 +747,10 @@ static void boot_usb_cmd_write(u_int32_t addr, const char *infilename)
 		error("mmap error: %s", strerror(errno));
 		exit(1);
 	}
-	if (ezx_blob_load_program(0xbeef, addr, prog,
-					st.st_size, 1) < 0) {
-		error("upload failed");
+
+	ret = ezx_blob_load_program(0xbeef, addr, prog, st.st_size, 1);
+	if (ret < 0) {
+		error("upload failed %s:", bl_err_mess(-ret));
 		munmap(prog, st.st_size);
 		close(fd);
 		exit(1);
@@ -758,18 +763,29 @@ static void boot_usb_cmd_write(u_int32_t addr, const char *infilename)
 
 static void boot_usb_cmd_off()
 {
-	ezx_blob_send_command("POWER_DOWN", NULL, 0, NULL);
+	int ret;
+
+	ret = ezx_blob_send_command("POWER_DOWN", NULL, 0, NULL);
+	if (ret < 0) {
+		error("powerdown failed: %s", bl_err_mess(-ret));
+		exit(1);
+	}
+
 	exit(0);
 }
 
 static void boot_usb_cmd_jump(u_int32_t addr)
 {
+	int ret;
+
 	if (addr < 0xa0000000 || addr > 0xa2000000 || addr % 8) {
 		error("invalid addr");
 		exit(1);
 	}
-	if (ezx_blob_cmd_jump(addr) < 0) {
-		error("jump failed");
+
+	ret = ezx_blob_cmd_jump(addr);
+	if (ret < 0) {
+		error("jump failed: %s", bl_err_mess(-ret));
 		exit(1);
 	}
 	exit(0);
@@ -780,6 +796,7 @@ static void boot_usb_cmd_setflag(const char *flagname)
 	unsigned int flag = 0;
 	/* flag address used by gen-blob */
 	unsigned int addr = 0xa1000000;
+	int ret;
 
 	if (!strcmp(flagname, "usb"))
 		flag = 0x0D3ADCA7;
@@ -796,7 +813,8 @@ static void boot_usb_cmd_setflag(const char *flagname)
 		exit(1);
 	}
 
-	if (ezx_blob_load_program(phone.product_id, addr, (char *)&flag, 4, 1) < 0) {
+	ret = ezx_blob_load_program(phone.product_id, addr, (char *)&flag, 4, 1);
+	if (ret < 0) {
 		error("flag send failed");
 		exit(1);
 	}
@@ -841,6 +859,7 @@ int main(int argc, char *argv[])
 	char *asm_code;
 	int k_offset = 0;
 	int mach_id = 867; /* 867 is the old EZX mach id */
+	int ret;
 
 	printf("%s\n", "$Id$");
 
@@ -978,16 +997,20 @@ int main(int argc, char *argv[])
 		memcpy(asm_code, phone.code, phone.code_size);
 		*(u_int32_t *)(asm_code + phone.code_size) = mach_id;
 
-		if (ezx_blob_load_program(phone.product_id, phone.kernel_addr, asm_code, CHUNK_SIZE, 1) < 0) {
-			error("asm code send failed");
+		ret = ezx_blob_load_program(phone.product_id, phone.kernel_addr,
+				asm_code, CHUNK_SIZE, 1);
+		if (ret < 0) {
+			error("asm code send failed: %s", bl_err_mess(-ret));
 			exit(1);
 		}
 		k_offset += CHUNK_SIZE;
 	}
 
 	info("Sending kernel\n");
-	if (ezx_blob_load_program(phone.product_id, phone.kernel_addr + k_offset, prog, st.st_size, 1) < 0) {
-		error("kernel upload failed");
+	ret = ezx_blob_load_program(phone.product_id,
+			phone.kernel_addr + k_offset, prog, st.st_size, 1);
+	if (ret < 0) {
+		error("kernel upload failed: %s", bl_err_mess(-ret));
 		exit(1);
 	}
 
@@ -1066,8 +1089,10 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 	info("Sending initrd\n");
-	if (ezx_blob_load_program(phone.product_id, phone.initrd_addr, prog, st.st_size, 1) < 0) {
-		error("initrd upload failed");
+	ret = ezx_blob_load_program(phone.product_id, phone.initrd_addr, prog,
+			st.st_size, 1);
+	if (ret < 0) {
+		error("initrd upload failed : %s", bl_err_mess(-ret));
 		exit(1);
 	}
 
@@ -1085,14 +1110,17 @@ send_params:
 	tag->hdr.tag = ATAG_NONE;
 	tag->hdr.size = 0;
 	info("Sending params\n");
-	if (ezx_blob_load_program(phone.product_id, phone.params_addr, (void *) first_tag, tagsize, 1) < 0) {
-		error("params upload failed");
+	ret = ezx_blob_load_program(phone.product_id, phone.params_addr,
+			(void *) first_tag, tagsize, 1);
+	if (ret < 0) {
+		error("params upload failed: %s", bl_err_mess(-ret));
 		exit(1);
 	}
 run_kernel:
 	info("Calling the kernel...\n");
-	if (ezx_blob_cmd_jump(phone.kernel_addr) < 0) {
-		error("kernel jump failed");
+	ret = ezx_blob_cmd_jump(phone.kernel_addr);
+	if (ret < 0) {
+		error("kernel jump failed: %s", bl_err_mess(-ret));
 		exit(1);
 	}
 	info("DONE\n");
