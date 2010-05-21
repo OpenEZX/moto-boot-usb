@@ -577,8 +577,10 @@ static int ezx_blob_flash_program(u_int32_t addr, char *data, int size)
 						cur_data, remain, 0)) < 0)
 			break;
 
-		/* pad up to flash block size */
-		remain += pad;
+		/* pad up to flash block size, ONLY when needed (last block).
+		   The logic is OK but this check can be made prettier */
+		if ((cur_addr + remain) % FLASH_BLOCK_SIZE)
+			remain += pad;
 
 		if ((err = ezx_blob_cmd_flash(FLASH_TEMP_ADDR, cur_addr, remain)) < 0)
 			break;
