@@ -486,7 +486,7 @@ static int ezx_blob_dload_program(u_int32_t addr, char *data, int size, int v)
 {
 	u_int32_t cur_addr;
 	char *cur_data;
-	int err;
+	int err = 0;
 	for (cur_addr = addr, cur_data = data;
 	     cur_addr < (addr + size);
 	     cur_addr += CHUNK_SIZE, cur_data += CHUNK_SIZE) {
@@ -555,6 +555,7 @@ static int ezx_blob_flash_program(u_int32_t addr, char *data, int size)
 	char *cur_data;
 	int pad = (size % FLASH_BLOCK_SIZE) ?
 		(FLASH_BLOCK_SIZE - (size % FLASH_BLOCK_SIZE)) : 0;
+	int err = 0;
 
 	info("Will flash %d bytes of data plus %d bytes of padding\n"
 	      "(%d bytes total, %d flash blocks, %d usb uploads)\n",
@@ -572,19 +573,22 @@ static int ezx_blob_flash_program(u_int32_t addr, char *data, int size)
 
 		remain = (remain > MAX_FLASH_SIZE) ? MAX_FLASH_SIZE : remain;
 
-		if (ezx_blob_load_program(0xbeef, FLASH_TEMP_ADDR,
-						cur_data, remain, 0) < 0)
-			return -1;
+		if ((err = ezx_blob_load_program(0xbeef, FLASH_TEMP_ADDR,
+						cur_data, remain, 0)) < 0)
+			break;
 
 		/* pad up to flash block size */
 		remain += pad;
 
-		if (ezx_blob_cmd_flash(FLASH_TEMP_ADDR, cur_addr, remain) < 0)
-			return -1;
+		if ((err = ezx_blob_cmd_flash(FLASH_TEMP_ADDR, cur_addr, remain)) < 0)
+			break;
 
 		info("\b\b\b%02d%%",
 		     (int)((100 * (cur_data - data)) / size));
 	}
+	if (err < 0)
+		return err;
+
 	info("\b\b\b\b100%% OK\n");
 	return 0;
 }
