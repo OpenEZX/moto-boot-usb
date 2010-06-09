@@ -1,4 +1,4 @@
-/* ezx_boot_usb - Ram Loader for Motorola EZX phones
+/* moto-boot-usb - Ram Loader for Motorola EZX phones
  *
  * (C) 2006 by Harald Welte <laforge@gnumonks.org>
  * (C) 2006, 2008 by Stefan Schmidt <stefan@datenfreihafen.org>
@@ -106,8 +106,8 @@ struct phonetype {
 	int code_size;
 };
 
-/* We set set the machine ID from boot_usb with this assembler tricks beacuse
- * the original blob is not able to do this for us.
+/* We set set the machine ID from moto-boot-usb with this assembler tricks
+ * beacuse the original blob is not able to do this for us.
  *
  * ldr     r1, [pc, #8]
  * sub     r0, pc, #12
@@ -614,19 +614,19 @@ static int is_valid_addr(char *addr)
 static void usage()
 {
 	info("upload a kernel:\n"
-	     "   boot_usb <kernel> [machid] [cmdline] [initrd]\n\n"
+	     "   moto-boot-usb <kernel> [machid] [cmdline] [initrd]\n\n"
 	     "gen-blob specific commands:\n"
-	     "   boot_usb read <addr> <size> <file>\t"
+	     "   moto-boot-usb read <addr> <size> <file>\t"
 	     "read memory contents (ram or flash)\n"
-	     "   boot_usb write <addr> <file>\t\t"
+	     "   moto-boot-usb write <addr> <file>\t\t"
 	     "write to RAM memory\n"
-	     "   boot_usb flash <addr> <file>\t\t"
+	     "   moto-boot-usb flash <addr> <file>\t\t"
 	     "write to flash memory\n"
-	     "   boot_usb jump <addr>\t\t\t"
+	     "   moto-boot-usb jump <addr>\t\t\t"
 	     "execute code at ram address\n"
-	     "   boot_usb setflag usb|dumpkeys|passthrough\t"
+	     "   moto-boot-usb setflag usb|dumpkeys|passthrough\t"
 	     "set memory flag for gen-blob\n"
-	     "   boot_usb off\t\t\t\t"
+	     "   moto-boot-usb off\t\t\t\t"
 	     "power off the phone\n\n");
 
 	info("You can use hexadecimal and decimal "
@@ -644,7 +644,7 @@ static void usage()
 	     "\t1745\tA910\n\n");
 }
 
-/* boot_usb commands */
+/* moto-boot-usb commands */
 
 static void boot_usb_cmd_read(u_int32_t addr, u_int32_t size, const char *outfilename)
 {
