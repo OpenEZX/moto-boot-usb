@@ -1,6 +1,6 @@
 AC_PREREQ(2.60)
-AC_INIT([boot_usb], [0.3], [openezx-devel@lists.openezx.org])
-AC_CONFIG_SRCDIR([src/boot_usb.c])
+AC_INIT([moto-boot-usb], [0.3], [openezx-devel@lists.openezx.org])
+AC_CONFIG_SRCDIR([src/moto-boot-usb.c])
 AC_CONFIG_HEADER([config.h])
 AM_INIT_AUTOMAKE([-Wall foreign])
 

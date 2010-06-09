@@ -1,7 +1,7 @@
 INTRODUCTION:
 -------------
 
-boot_usb was designed to communicate with the bootloader of EZX phones. It is
+moto-boot-usb was designed to communicate with the bootloader of EZX phones. It is
 part of the OpenEZX project (http://www.openezx.org/) and only useful for
 Motorola EZX linux phones.
 
@@ -47,7 +47,7 @@ point to a kernel tree configured for ARM.
 USAGE:
 ------
 
-boot_usb <kernel> [machid] [cmdline] [initrd]
+moto-boot-usb <kernel> [machid] [cmdline] [initrd]
 
 
 KNOWN SHORTCOMINGS:
