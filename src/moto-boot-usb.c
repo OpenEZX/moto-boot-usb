@@ -43,7 +43,7 @@
 
 #include <asm/setup.h> /* for boot_params */
 
-//#define USECS_SLEEP 500
+#define USECS_SLEEP 500
 
 //#define DEBUG
 
@@ -918,7 +918,26 @@ int main(int argc, char *argv[])
 				addr = atoi(argv[2]);
 
 			if (addr == 0) {
+				const char *confirmation = "yes, do it, I am sure";
+				char user_input[32] = "\0";
 				int c = 30;
+
+				printf("WARNING: flashing at address 0 is a dangerous operation!\n");
+				printf("Type \"%s\" to continue: ", confirmation);
+
+				if (fgets(user_input, 32, stdin) == NULL) {
+					error("fgets failed");
+					exit(1);
+				}
+				/* remove trailing newline */
+				user_input[strlen(user_input) - 1] = '\0';
+
+				if (strncmp(user_input, confirmation, 32) != 0)
+				{
+					error("invalid confirmation string");
+					exit(1);
+				}
+
 				while (c > 0) {
 					printf(">>> WILL FLASH THE BOOTLOADER IN %d SECONDS <<<\n", c--);
 					sleep(1);
