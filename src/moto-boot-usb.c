@@ -43,7 +43,7 @@
 
 #include <asm/setup.h> /* for boot_params */
 
-#define USECS_SLEEP 500
+//#define USECS_SLEEP 500
 
 //#define DEBUG
 
