@@ -878,7 +878,10 @@ int main(int argc, char *argv[])
 
 	ezx_device_open();
 
-	boot_usb_query_info();
+
+	/* Gen-blob does not support all the query commands */
+	if (phone.product_id != 0xbeef)
+		boot_usb_query_info();
 
 	if (phone.product_id == 0xbeef) {
 		if (!strcmp(argv[1], "read")) {
