@@ -628,6 +628,8 @@ static void usage()
 	     "set memory flag for gen-blob\n"
 	     "   moto-boot-usb off\t\t\t\t"
 	     "power off the phone\n"
+	     "   moto-boot-usb help|--help\t\t\t"
+	     "show this help screen\n"
 	     "\n");
 
 	info("You can use hexadecimal and decimal "
@@ -876,6 +878,12 @@ int main(int argc, char *argv[])
 		error("Too few arguments.");
 		exit(1);
 	}
+
+	if (!strcmp(argv[1], "help") || !strcmp(argv[1], "--help")) {
+		usage();
+		exit(0);
+	}
+
 
 	ezx_device_open();
 
