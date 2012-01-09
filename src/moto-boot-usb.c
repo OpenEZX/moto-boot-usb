@@ -627,7 +627,8 @@ static void usage()
 	     "   moto-boot-usb setflag usb|dumpkeys|passthrough\t"
 	     "set memory flag for gen-blob\n"
 	     "   moto-boot-usb off\t\t\t\t"
-	     "power off the phone\n\n");
+	     "power off the phone\n"
+	     "\n");
 
 	info("You can use hexadecimal and decimal "
 	     "for <addr> and <size> arguments,\n"
