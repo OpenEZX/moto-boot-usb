@@ -162,8 +162,14 @@ int main(int argc, char *argv[])
 	}
 
 	ret = fread(&nparts, 8, 1, fp);
-	if (feof(fp) || ferror(fp)) {
-		perror("fread nparts");
+	if (ret < 1) {
+		if (feof(fp)) {
+			perror("fread nparts, feof");
+		} else if (ferror(fp)) {
+			perror("fread nparts, ferror");
+		} else {
+			perror("fread nparts");
+		}
 		exit(1);
 	}
 	rewind(fp);
@@ -177,8 +183,14 @@ int main(int argc, char *argv[])
 	for (i = 0; i < nparts; i++) {
 
 		ret = fread(buffer, 64, 1, fp);
-		if (feof(fp) || ferror(fp)) {
-			perror("fread");
+		if (ret < 1) {
+			if (feof(fp)) {
+				perror("fread, feof");
+			} else if (ferror(fp)) {
+				perror("fread, ferror");
+			} else {
+				perror("fread");
+			}
 			exit(1);
 		}
 
