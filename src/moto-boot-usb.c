@@ -870,8 +870,6 @@ int main(int argc, char *argv[])
 	int mach_id = 867; /* 867 is the old EZX mach id */
 	int ret;
 
-	printf("%s\n", "$Id$");
-
 	if (argc < 2) {
 		usage();
 
