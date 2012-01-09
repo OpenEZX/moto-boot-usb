@@ -46,40 +46,40 @@ struct part_info {
 
 static int parse_entry(unsigned char *buffer, struct part_info *partition)
 {
-	unsigned char *iter = buffer;
+	unsigned char *iter;
 
 	/* if the name is null, the we assume the entry is not valid */
-	if (buffer[8] == 0)
+	if (buffer[sizeof (partition->nparts)] == 0)
 		return 1;
 
+	iter = buffer;
 
-	iter = &buffer[0];
-	memcpy(&partition->nparts, iter, 8);
-	iter += 8;
+	memcpy(&partition->nparts, iter, sizeof (partition->nparts));
+	iter += sizeof (partition->nparts);
 
-	memcpy(&partition->CGname, iter, 32);
-	iter += 32;
+	memcpy(&partition->CGname, iter, sizeof (partition->CGname));
+	iter += sizeof (partition->CGname);
 
-	memcpy(&partition->CGn, iter, 2);
-	iter += 2;
+	memcpy(&partition->CGn, iter, sizeof (partition->CGn));
+	iter += sizeof (partition->CGn);
 
-	memcpy(&partition->sig_type, iter, 2);
-	iter += 2;
+	memcpy(&partition->sig_type, iter, sizeof (partition->sig_type));
+	iter += sizeof (partition->sig_type);
 
-	memcpy(&partition->start_addr, iter, 4);
-	iter += 4;
+	memcpy(&partition->start_addr, iter, sizeof (partition->start_addr));
+	iter += sizeof (partition->start_addr);
 
-	memcpy(&partition->end_addr, iter, 4);
-	iter += 4;
+	memcpy(&partition->end_addr, iter, sizeof (partition->end_addr));
+	iter += sizeof (partition->end_addr);
 
-	memcpy(&partition->base_addr, iter, 4);
-	iter += 4;
+	memcpy(&partition->base_addr, iter, sizeof (partition->base_addr));
+	iter += sizeof (partition->base_addr);
 
-	memcpy(&partition->sig_start, iter, 4);
-	iter += 4;
+	memcpy(&partition->sig_start, iter, sizeof (partition->sig_start));
+	iter += sizeof (partition->sig_start);
 
-	memcpy(&partition->sig_end, iter, 4);
-	iter += 4;
+	memcpy(&partition->sig_end, iter, sizeof (partition->sig_end));
+	iter += sizeof (partition->sig_end);
 
 	return 0;
 }
