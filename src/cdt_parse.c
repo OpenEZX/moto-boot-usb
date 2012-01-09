@@ -24,6 +24,8 @@
  * ./cdt_parse cdt.bin
  */
 
+/* TODO: make the print fuinction endiannes-safe */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
