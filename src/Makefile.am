@@ -7,5 +7,5 @@ moto_boot_usb_LDADD = $(USB_LIBS)
 rqhw_decode_CFLAGS = -std=c99 -pedantic -Wall -Wextra
 rqhw_decode_SOURCES = rqhw_decode.c
 
-cdt_parse_CFLAGS = -std=c99 -pedantic -Wall -Wextra
+cdt_parse_CFLAGS = -std=c99 -pedantic -Wall -Wextra -D_BSD_SOURCE
 cdt_parse_SOURCES = cdt_parse.c
