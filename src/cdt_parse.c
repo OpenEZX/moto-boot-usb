@@ -17,7 +17,7 @@
  */
 
 /* Thanks to sabrod and to the Motorola Milestone hackers:
- * http://and-developers.com/motorola_milestone:partitions:cdt
+ * http://and-developers.com/partitions:cdt
  *
  * Tutorial:
  * sudo ./moto-boot-usb read 0x00060800 129024 cdt.bin
@@ -40,7 +40,7 @@ struct part_info {
 	uint32_t start_addr;
 	uint32_t end_addr;
 	uint32_t base_addr; /* base_address?
-			       see http://and-developers.com/motorola_milestone:partitions:cdt */
+			       see http://and-developers.com/partitions:cdt */
 	uint32_t sig_start;
 	uint32_t sig_end;
 
