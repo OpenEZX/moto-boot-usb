@@ -36,12 +36,14 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+#define CDT_HEADER_DISK_SIZE 8
 struct cdt_header {
 	uint16_t nparts;
 	uint16_t unknown0;
 	uint32_t unknown1;
 };
 
+#define PART_INFO_DISK_SIZE 64
 struct part_info {
 	uint8_t CGname[32];
 	uint16_t CGn;
@@ -219,10 +221,22 @@ int main(int argc, char *argv[])
 		goto out_close_fd;
 	}
 
+	if (size < CDT_HEADER_DISK_SIZE) {
+		fprintf(stderr, "File cannot contain a CDT header.\n");
+		exit_code = EXIT_FAILURE;
+		goto out_munmap;
+	}
+
 	/* iterate over a copy of the pointer */
 	buffer_iterator = buffer;
 
 	parse_header(&buffer_iterator, &header);
+
+	if (size < PART_INFO_DISK_SIZE * header.nparts) {
+		fprintf(stderr, "File cannot contain all the expected partitions.\n");
+		exit_code = EXIT_FAILURE;
+		goto out_munmap;
+	}
 
 	flashmap = calloc(header.nparts, sizeof(*flashmap));
 	if (flashmap == NULL) {
