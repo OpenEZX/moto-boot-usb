@@ -1,6 +1,6 @@
-/* cdt_parse - parses cdt.bin, the flash layout table used on some Moto phones
+/* cdt_parse - parse kct.bin/cdt.bin, the flash map used on some Moto phones
  *
- * Copyright (C) 2010  Antonio Ospite <ospite@studenti.unina.it>
+ * Copyright (C) 2011  Antonio Ospite <ospite@studenti.unina.it>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,12 +16,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* Thanks to sabrod and to the Motorola Milestone hackers:
+/* 
+ * Thanks to sabrod and to the Motorola Milestone hackers:
  * http://and-developers.com/partitions:cdt
  *
  * Tutorial:
  * sudo ./moto-boot-usb read 0x00060800 129024 cdt.bin
  * ./cdt_parse cdt.bin
+ *
+ * NOTE:
+ * This program has been tested with the kct.bin_cdt.bin file
+ * from a Motorola A910, a gen2 EZX phone, the format might be slightly
+ * different from the one used on other Motorola products.
  */
 
 #include <stdio.h>
