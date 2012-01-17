@@ -118,7 +118,7 @@ struct phonetype {
 #define pxa_code_s 16
 
 #define EZX_VENDOR_ID 0x22b8
-struct phonetype phonetypes[] = {
+static struct phonetype phonetypes[] = {
 { "A780/E680",        0x6003, 0x02, 0x81, 0xa0300000, 0xa0600000, 0xa0000100, pxa_code, pxa_code_s },
 { "Generic Blob",     0xbeef, 0x02, 0x81, 0xa0200000, 0xa0500000, 0xa0000100, pxa_code, pxa_code_s }, /* pxa_code is temporary here */
 { "A780/E680 Blob2",  0x6021, 0x02, 0x81, 0xa0300000, 0xa0600000, 0xa0000100, pxa_code, pxa_code_s },
@@ -209,7 +209,7 @@ static char *bl_err_mess(uint8_t code)
 }
 
 
-struct phonetype phone = { "Unknown", 0, 0, 0, 0, 0, 0, NULL, 0 };
+static struct phonetype phone = { "Unknown", 0, 0, 0, 0, 0, 0, NULL, 0 };
 
 
 /* usb handling */
@@ -254,7 +254,7 @@ static void ezx_device_close(void)
 	}
 }
 
-static void ezx_device_open()
+static void ezx_device_open(void)
 {
 	struct usb_device *dev;
 
@@ -611,7 +611,7 @@ static int is_valid_addr(char *addr)
 	return 1;
 }
 
-static void usage()
+static void usage(void)
 {
 	info("upload a kernel:\n"
 	     "   moto-boot-usb <kernel> [machid] [cmdline] [initrd]\n\n"
@@ -770,7 +770,7 @@ static void boot_usb_cmd_write(u_int32_t addr, const char *infilename)
 	exit(0);
 }
 
-static void boot_usb_cmd_off()
+static void boot_usb_cmd_off(void)
 {
 	int ret;
 
